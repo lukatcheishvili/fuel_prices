@@ -330,6 +330,11 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   whole row (logo, name, stem, dot, price) slides to its new rank and the price counts while
   moving. A full-row invisible rect is the tooltip hit area. Don't go back to a category y-axis:
   it relabels rows in place, so dots appear to change owner mid-animation.
+- **Never resize/re-render a chart while it's hidden** (inactive tab, phone-hidden fuel card). It
+  measures 0px wide and the custom-series rows collapse onto the brand labels without recovering.
+  The window resize handler filters with `isVisible()`; tab switches and phone chart switches fire a
+  resize after showing, so hidden charts catch up then. Regression test: Settings → Dashboard,
+  Sources → resize → Dashboard, desktop → phone width → desktop, and phone rotation.
 - Testing animations: headless `--dump-dom` / `--virtual-time-budget` do NOT advance animations.
   Use puppeteer-core with the installed Chrome (real time). Screenshot inside the viewport;
   `captureBeyondViewport` resizes the page and produced a false "collapsed chart" frame.
@@ -465,3 +470,6 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   Shipped in v1.1.0.
 - **2026-10-03**: User approved the phone/Settings/iPhone work. Committed, pushed to `main` (Vercel
   auto-deploy), and published GitHub release **v1.1.0** (v1.0.0 kept as history).
+- **2026-10-03**: Fixed the gap charts overlapping their labels (reported by the user with a screenshot):
+  any tab switch fired a resize that re-rendered the hidden dashboard charts at 0px width. Hidden charts
+  are now skipped. Verified with 13 desktop/phone/rotation scenarios. README links the live site.

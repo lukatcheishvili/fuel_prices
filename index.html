@@ -2124,12 +2124,17 @@ function setupChartSwitch(switchId, gridId) {
   show(settings.defaultFuel, false);
 }
 
+// Charts are only ever resized while visible. A chart on a hidden tab (or a phone-hidden fuel)
+// measures 0px wide; resizing it then squashed every dot and stem onto the brand labels, and
+// it didn't recover when shown again. Hidden charts are skipped and catch up when shown
+// (tab switches and phone chart switches fire a resize after showing them).
+const isVisible = chart => chart.getDom().offsetParent !== null && chart.getDom().clientWidth > 0;
 window.addEventListener("resize", () => {
-  charts.forEach(c => {
+  charts.filter(isVisible).forEach(c => {
     c.setOption({ xAxis: { interval: tickInterval(c.getDom(), gapXMax) } });
     c.resize();
   });
-  historyCharts.forEach(c => c.resize());
+  historyCharts.filter(isVisible).forEach(c => c.resize());
 });
 
 setupFuelSwitch();
