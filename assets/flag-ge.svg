@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">
+  <rect width="300" height="200" fill="#ffffff"/>
+  <path fill="#ff0000" d="M130 0h40v200h-40zM0 80h300v40H0z"/>
+  <defs>
+    <path id="c" fill="#ff0000" d="M-2-2L-5-18Q0-16 5-18L2-2L18-5Q16 0 18 5L2 2L5 18Q0 16-5 18L-2 2L-18 5Q-16 0-18-5Z"/>
+  </defs>
+  <use href="#c" x="65" y="40"/>
+  <use href="#c" x="235" y="40"/>
+  <use href="#c" x="65" y="160"/>
+  <use href="#c" x="235" y="160"/>
+</svg>

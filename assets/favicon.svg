@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Fuel pump on the dashboard's near-black canvas; display window in Rosso Corsa. -->
+  <rect width="64" height="64" fill="#181818"/>
+  <path fill="#ffffff" d="M15 11h20a3 3 0 0 1 3 3v36H12V14a3 3 0 0 1 3-3z"/>
+  <rect x="17" y="16" width="16" height="11" fill="#da291c"/>
+  <rect x="9" y="49" width="32" height="5" fill="#ffffff"/>
+  <path fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="square" stroke-linejoin="round"
+        d="M38 22h5a3 3 0 0 1 3 3v16a3 3 0 0 0 6 0V23l-5-6"/>
+</svg>
