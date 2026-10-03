@@ -1,7 +1,8 @@
 # Georgia Fuel Prices
 
 A dashboard of current fuel prices from Georgia's four main distributors: **Wissol**, **SOCAR**,
-**Gulf** and **Lukoil**. Built for a diesel driver who wants to see the cheapest option at a glance.
+**Gulf** and **Lukoil**. Built for drivers who want to see the cheapest place to fill up at a glance,
+whatever fuel they use.
 
 ## What it shows
 
@@ -14,6 +15,12 @@ A dashboard of current fuel prices from Georgia's four main distributors: **Wiss
 - **Five years of prices:** daily price history per fuel (cheapest-to-priciest band plus the
   average).
 - **Sources:** a link to every official page the numbers come from.
+- **Settings:** pick your default fuel and your loyalty card level at each company (for example
+  SOCAR 150+ L or Wissol Gold), and choose whether the dashboard opens with your card prices on.
+  Saved in your browser (localStorage); nothing is sent anywhere.
+
+Works on desktop and phones. On a phone the layout is compact (one-line podium rows, a rotated
+price board, one chart at a time with its own fuel switch).
 
 ## Stack
 

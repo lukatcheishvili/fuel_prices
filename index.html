@@ -2,7 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Safari toolbars and the iOS status bar blend into the dark canvas -->
+<meta name="theme-color" content="#181818">
+<meta name="color-scheme" content="dark">
+<!-- Add to Home Screen: opens full-screen like an app -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fuel Prices">
+<link rel="manifest" href="site.webmanifest">
 <title>Georgia Fuel Prices</title>
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
@@ -51,11 +60,34 @@
   @media (prefers-reduced-motion: reduce) {
     :root { --dur-fast: 0ms; --dur: 0ms; --dur-slow: 0ms; }
   }
+  /* Hover feedback only for devices that can hover (mouse/trackpad), never sticky on touch. */
+  @media (hover: hover) {
+    .tab-button:hover,
+    .card-switch:hover,
+    .fuel-switch button:hover,
+    .settings-link:hover,
+    .text-button:hover { color: var(--ink); }
+    .level:hover { background: var(--canvas-elevated); }
+    .board a:hover { text-decoration-color: var(--ink); }
+  }
+  /* Desktop/phone content swaps: inline (.d-only/.m-only) and block (.only-desktop/.only-mobile). */
+  .m-only, .only-mobile, .mobile-switch { display: none; }
+  .fuel-switch.mobile-switch { display: none; }  /* must beat .fuel-switch's own display:grid */
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   /* Applied for one frame when an indicator must jump into place (first paint, resize). */
   .no-anim, .no-anim * { transition: none !important; }
 
   * { box-sizing: border-box; }
 
+  html {
+    background: var(--canvas);      /* overscroll / rubber-band area stays dark on iOS */
+    -webkit-text-size-adjust: 100%; /* no font inflation when an iPhone rotates to landscape */
+    text-size-adjust: 100%;
+  }
+  button, a, label, [role="radio"] {
+    touch-action: manipulation;     /* no double-tap-zoom delay on taps */
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     margin: 0;
     background: var(--canvas);
@@ -69,12 +101,13 @@
   .wrap {
     max-width: var(--max-width);
     margin: 0 auto;
-    padding: 0 var(--space-md);
+    padding: 0 max(var(--space-md), env(safe-area-inset-right)) 0 max(var(--space-md), env(safe-area-inset-left));
   }
 
   /* ---------- Top nav ---------- */
   .top-nav {
-    height: 64px;
+    height: calc(64px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);  /* home-screen app: clear the status bar */
     border-bottom: 1px solid var(--hairline);
   }
   .top-nav .wrap {
@@ -94,6 +127,8 @@
     text-transform: uppercase;
     white-space: nowrap;
   }
+  a.brand { color: inherit; text-decoration: none; cursor: pointer; }
+  a.brand:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
   .brand-flag {
     width: 24px;
     height: 16px;
@@ -131,8 +166,9 @@
     height: 100%;
     transition: color var(--dur) var(--ease);
   }
-  .tab-button:hover,
   .tab-button.active { color: var(--ink); }
+  .tab-button { display: inline-flex; align-items: center; gap: 6px; }
+  .tab-icon { flex: none; }
   .tab-button:focus-visible {
     outline: 2px solid var(--ink);
     outline-offset: -2px;
@@ -252,7 +288,6 @@
     flex: none;
   }
   .card-switch { transition: color var(--dur) var(--ease); }
-  .card-switch:hover,
   .card-switch[aria-checked="true"] { color: var(--ink); }
   .card-switch:focus-visible {
     outline: 2px solid var(--ink);
@@ -315,7 +350,6 @@
     transition: color var(--dur) var(--ease);
   }
   .fuel-switch button + button { border-left: 1px solid var(--hairline); }
-  .fuel-switch button:hover { color: var(--ink); }
   .fuel-switch button[aria-checked="true"] { color: var(--canvas); }
   .fuel-switch button:focus-visible {
     outline: 2px solid var(--ink);
@@ -354,6 +388,7 @@
   }
   .podium-pos.p1 { color: var(--primary); }
   .podium-row .logo { width: 48px; height: 48px; }
+  .podium-info { min-width: 0; }
   .podium-company {
     font-size: 18px;
     font-weight: 700;
@@ -608,6 +643,16 @@
     color: var(--muted);
     font-size: 13px;
   }
+  table.board.board-t { min-width: 0; table-layout: fixed; }  /* beats the desktop table's 720px minimum */
+  .board-t th, .board-t td { padding: 12px 6px; text-align: center; vertical-align: middle; }
+  .board-t th:first-child, .board-t td:first-child { text-align: left; padding-left: var(--space-xs); width: 30%; }
+  .board-t thead th { text-transform: none; letter-spacing: 0; }
+  .board-t .logo { width: 28px; height: 28px; margin: 0 auto 4px; }
+  .board-t .co { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  .board-t tbody th { font-size: 13px; font-weight: 600; color: var(--ink); background: none; text-transform: none; letter-spacing: 0; }
+  .board-t .price { font-size: 15px; gap: 5px; }
+  .board-t .price.cheapest::before { width: 6px; height: 6px; }
+  .board-note { color: var(--body); font-size: 12px; margin: var(--space-xs) 0 0; }
   .board-key {
     color: var(--body);
     font-size: 12px;
@@ -623,6 +668,98 @@
     display: inline-block;
   }
 
+  /* ---------- Settings: loyalty card levels ---------- */
+  .settings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--hairline);
+    border: 1px solid var(--hairline);
+  }
+  .settings-card {
+    background: var(--canvas);
+    margin: 0;
+    padding: 0;
+    border: none;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .settings-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-sm) var(--space-xs);
+  }
+  .settings-head .logo { width: 36px; height: 36px; }
+  .settings-company { font-size: 16px; font-weight: 600; }
+  .settings-cardname { color: var(--body); font-size: 12px; margin-top: 2px; }
+  .level {
+    position: relative;
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-xs);
+    min-height: 52px;
+    padding: var(--space-xxs) var(--space-sm);
+    border-top: 1px solid var(--hairline);
+    cursor: pointer;
+    transition: background-color var(--dur) var(--ease);
+  }
+  .level input { position: absolute; opacity: 0; pointer-events: none; }
+  .level-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid var(--body);
+    transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  }
+  .level-name { font-size: 14px; font-weight: 600; color: var(--body); transition: color var(--dur) var(--ease); }
+  .level-note { display: block; color: var(--body); font-size: 12px; margin-top: 2px; }
+  .level-disc { font-size: 15px; font-weight: 600; color: var(--body); font-variant-numeric: tabular-nums; }
+  .level:has(input:checked) { background: var(--canvas-elevated); }
+  .level:has(input:checked) .level-dot { border-color: var(--ink); box-shadow: inset 0 0 0 4px var(--canvas-elevated), inset 0 0 0 8px var(--ink); }
+  .level:has(input:checked) .level-name,
+  .level:has(input:checked) .level-disc { color: var(--ink); }
+  .level:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: -2px; }
+  .settings-link {
+    margin-top: auto;
+    padding: var(--space-xs) var(--space-sm);
+    border-top: 1px solid var(--hairline);
+    color: var(--body);
+    font-size: 12px;
+    text-decoration: none;
+  }
+  .settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+    margin-top: var(--space-sm);
+  }
+  .text-button {
+    appearance: none;
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--body);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.65px;
+    text-transform: uppercase;
+    text-decoration: underline;
+    text-decoration-color: var(--muted);
+    text-underline-offset: 4px;
+  }
+  .save-status { color: var(--body); font-size: 12px; min-height: 18px; }
+  .settings-block + .settings-block { margin-top: var(--space-lg); }
+  .settings-label { font-size: 18px; font-weight: 500; margin: 0; }
+  .settings-help { color: var(--body); font-size: 13px; margin: var(--space-xxxs) 0 var(--space-xs); }
+  .settings-block .fuel-switch { width: min(100%, 520px); }
+
   /* ---------- Sources ---------- */
   .board a {
     color: var(--ink);
@@ -631,7 +768,6 @@
     text-underline-offset: 3px;
     word-break: break-all;
   }
-  .board a:hover { text-decoration-color: var(--ink); }
 
   /* Spans the full content width so its edges line up with the sections above. */
   .footnote {
@@ -642,7 +778,7 @@
     hyphens: auto;
     border-top: 1px solid var(--hairline);
     margin: var(--space-lg) 0 0;
-    padding: var(--space-sm) 0 var(--space-xl);
+    padding: var(--space-sm) 0 calc(var(--space-xl) + env(safe-area-inset-bottom));  /* clear the home indicator */
   }
   .footnote strong { color: var(--ink); font-weight: 600; }
 
@@ -651,35 +787,140 @@
     .chart-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 760px) {
-    .wrap { padding: 0 var(--space-xs); }
-    .kpi-grid { grid-template-columns: 1fr; }
-    .footnote { text-align: left; }  /* justify leaves gaps on narrow lines */
-    .hero-title { font-size: 28px; }
-    .fuel-switch { width: 100%; grid-template-columns: repeat(2, 1fr); }
-    .fuel-switch button:nth-child(3) { border-left: none; }
-    .fuel-switch button:nth-child(n+3) { border-top: 1px solid var(--hairline); }
-    .podium-row,
-    .podium-row.first {
-      grid-template-columns: 40px 40px 1fr;
-      gap: var(--space-xs);
-      padding: 0 var(--space-xs);
-      height: 160px;
-      align-content: center;  /* keep the two content rows together inside the fixed height */
-    }
-    .podium-row.first { height: 168px; }
-    .badge .long { display: none; }
-    .badge .short { display: inline; }
-    .hero-sub { flex-direction: column; align-items: flex-start; }
-    .section-tools { align-items: flex-start; }
-    .podium-pos, .podium-row.first .podium-pos { font-size: 28px; }
-    .podium-row .logo, .podium-row.first .logo { width: 40px; height: 40px; }
-    .podium-price {
-      grid-column: 2 / -1;
-      text-align: left;
-    }
-    .podium-row.first .podium-price .value { font-size: 40px; }
+    .wrap { padding: 0 max(var(--space-xs), env(safe-area-inset-right)) 0 max(var(--space-xs), env(safe-area-inset-left)); }
+    .m-only { display: inline; }
+    .d-only { display: none; }
+    .only-mobile { display: block; }
+    .only-desktop { display: none; }
     .tabs { gap: var(--space-xs); }
     .brand-name-long { display: none; }
+
+    /* Rhythm: tighter sections on a small screen */
+    .section { padding-top: var(--space-lg); }
+    .section-title { font-size: 22px; }
+    .section-head { margin-bottom: var(--space-xs); }
+    .section-tools { align-items: flex-start; }
+    .footnote { text-align: left; }  /* justify leaves gaps on narrow lines */
+
+    /* Hero */
+    .hero { padding-top: var(--space-md); }
+    .hero-title { font-size: 28px; }
+    .hero-sub { flex-direction: column; align-items: flex-start; gap: var(--space-xs); margin: var(--space-xs) 0 var(--space-sm); }
+
+    /* Fuel switches: full-width 2x2, phone-only switches above the chart sections */
+    .fuel-switch { width: 100%; grid-template-columns: repeat(2, 1fr); }
+    .fuel-switch button { height: 40px; }
+    .fuel-switch button:nth-child(3) { border-left: none; }
+    .fuel-switch button:nth-child(n+3) { border-top: 1px solid var(--hairline); }
+    .fuel-switch.mobile-switch { display: grid; margin-bottom: var(--space-xs); }
+    .settings-grid { grid-template-columns: 1fr; }
+    .settings-head { padding: var(--space-xs); }
+    .level { padding: var(--space-xxs) var(--space-xs); }
+    .settings-link { padding: 12px var(--space-xs); }
+
+    /* Podium: one compact line per brand (position, logo, name, price); fixed heights */
+    .podium-row,
+    .podium-row.first {
+      grid-template-columns: 28px 32px minmax(0, 1fr) auto;
+      gap: 12px;
+      padding: 0 var(--space-xs);
+      height: 92px;
+    }
+    .podium-row.first { height: 108px; }
+    .podium-pos { font-size: 22px; letter-spacing: -0.4px; }
+    .podium-row.first .podium-pos { font-size: 26px; letter-spacing: -0.5px; }
+    .podium-row .logo, .podium-row.first .logo { width: 32px; height: 32px; }
+    .podium-company { font-size: 16px; }
+    .podium-product, .podium-card { font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+    .podium-price .value { font-size: 26px; letter-spacing: -0.3px; }
+    .podium-row.first .podium-price .value { font-size: 34px; letter-spacing: -0.6px; }
+    .podium-gap { margin-top: var(--space-xxxs); font-size: 11px; }
+    .badge .long { display: none; }
+    .badge .short { display: inline; }
+
+    /* Cheapest by fuel: label + price on one line, station underneath */
+    .kpi-grid { grid-template-columns: 1fr; }
+    .kpi-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: "label main" "who who";
+      align-items: center;
+      gap: var(--space-xxxs) var(--space-xs);
+      padding: var(--space-xs);
+    }
+    .kpi-card .eyebrow { grid-area: label; }
+    .kpi-main { grid-area: main; gap: 12px; }
+    .kpi-who { grid-area: who; }
+    .kpi-price { font-size: 28px; }
+    .kpi-logos .logo { width: 28px; height: 28px; }
+
+    /* Chart sections: one fuel at a time (picked with the section's own switch) */
+    .chart-grid.single .chart-card:not(.is-current) { display: none; }
+    .chart-grid.single .chart-card h3 { display: none; }
+    .chart-card { padding: var(--space-xs); }
+    .chart.tall { height: 220px; }
+
+    /* Sources tables become stacked cards */
+    table.board.stack { min-width: 0; }
+    .board.stack thead { display: none; }
+    .board.stack, .board.stack tbody, .board.stack tr, .board.stack td { display: block; width: 100%; }
+    .board.stack tr { padding: var(--space-xs); border-bottom: 1px solid var(--hairline); }
+    .board.stack tr:last-child { border-bottom: none; }
+    .board.stack td { padding: var(--space-xxxs) 0; border: none; text-align: left; }
+    .board.stack td:first-child { margin-bottom: var(--space-xxs); }
+    .board.stack td[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      color: var(--body);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.1px;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+  }
+  @media (max-width: 420px) {
+    .brand-text { display: none; }
+  }
+
+  /* Touch screens: every control is at least 44px tall (Apple HIG). */
+  @media (pointer: coarse) {
+    a.brand { align-self: stretch; padding-right: var(--space-xs); }
+    .card-switch { min-height: 44px; }
+    .fuel-switch button { height: 44px; }
+    .text-button { min-height: 44px; }
+    .settings-link { padding-top: 14px; padding-bottom: 14px; }
+  }
+
+  /* iPhone 17 Pro Max (440px) and other large phones: use the extra width. */
+  @media (min-width: 430px) and (max-width: 760px) {
+    .hero-title { font-size: 30px; }
+    .podium-company { font-size: 17px; }
+    .podium-row .podium-price .value { font-size: 28px; }
+    .podium-row.first .podium-price .value { font-size: 36px; }
+    .kpi-price { font-size: 30px; }
+  }
+
+  /* Phones held sideways (iPhone 17 Pro 874x402, Pro Max 956x440): wide but very short, so keep
+     the desktop columns but use the compact podium and tighter spacing. */
+  @media (max-height: 500px) and (min-width: 761px) and (pointer: coarse) {
+    .hero { padding-top: var(--space-sm); }
+    .hero-sub { margin: var(--space-xs) 0 var(--space-sm); }
+    .section { padding-top: var(--space-lg); }
+    .podium-row,
+    .podium-row.first {
+      grid-template-columns: 56px 40px minmax(0, 1fr) auto;
+      height: 76px;
+      padding: 0 var(--space-sm);
+    }
+    .podium-row.first { height: 92px; }
+    .podium-pos { font-size: 28px; }
+    .podium-row.first .podium-pos { font-size: 34px; }
+    .podium-row .logo, .podium-row.first .logo { width: 36px; height: 36px; }
+    .podium-price .value { font-size: 30px; }
+    .podium-row.first .podium-price .value { font-size: 40px; }
+    .podium-gap { margin-top: var(--space-xxxs); }
+    .chart.tall { height: 220px; }
   }
 </style>
 </head>
@@ -687,10 +928,11 @@
 
 <nav class="top-nav">
   <div class="wrap">
-    <div class="brand"><img class="brand-flag" src="assets/flag-ge.svg" alt="Flag of Georgia"><span>Georgia Fuel<span class="brand-name-long"> Prices</span></span></div>
+    <a class="brand" href="./" id="brandHome" aria-label="Georgia Fuel Prices, go to dashboard"><img class="brand-flag" src="assets/flag-ge.svg" alt=""><span class="brand-text">Georgia Fuel<span class="brand-name-long"> Prices</span></span></a>
     <div class="tabs" role="tablist">
       <button class="tab-button active" data-tab="dashboard" role="tab" aria-selected="true">Dashboard</button>
       <button class="tab-button" data-tab="sources" role="tab" aria-selected="false">Sources</button>
+      <button class="tab-button" data-tab="settings" role="tab" aria-selected="false" aria-label="Settings" title="Settings"><svg class="tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     </div>
   </div>
 </nav>
@@ -744,6 +986,7 @@
           </div>
         </div>
       </div>
+      <div class="fuel-switch mobile-switch" id="gapSwitch" role="radiogroup" aria-label="Fuel for these charts"></div>
       <div class="chart-grid" id="chartGrid"></div>
     </section>
 
@@ -754,10 +997,14 @@
           <p class="section-sub">Every tracked price in GEL per liter, standard (full-service) pump price.</p>
         </div>
       </div>
-      <div class="table-scroll">
+      <div class="table-scroll only-desktop">
         <table class="board" id="board"></table>
       </div>
-      <div class="board-key"><i></i>Cheapest in column</div>
+      <div class="table-scroll only-mobile">
+        <table class="board board-t" id="boardMobile"></table>
+      </div>
+      <div class="board-key"><i></i><span class="d-only">Cheapest in column</span><span class="m-only">Cheapest in row</span></div>
+      <p class="board-note only-mobile" id="boardNote"></p>
     </section>
 
     <section class="section" aria-labelledby="historyTitle" id="historySection">
@@ -773,6 +1020,7 @@
           <span><i class="swatch-band"></i>Cheapest to priciest</span>
         </div>
       </div>
+      <div class="fuel-switch mobile-switch" id="historySwitch" role="radiogroup" aria-label="Fuel for these charts"></div>
       <div class="chart-grid" id="historyGrid"></div>
       <p class="chart-note" id="historyNote"></p>
     </section>
@@ -791,7 +1039,7 @@
         </div>
       </div>
       <div class="table-scroll">
-        <table class="board" id="sourcesTable">
+        <table class="board stack" id="sourcesTable">
           <thead>
             <tr><th>Company</th><th>Current prices</th><th>Price history</th><th>Last checked</th></tr>
           </thead>
@@ -804,15 +1052,16 @@
         <div>
           <p class="eyebrow">Loyalty cards</p>
           <h2 class="section-title">How card prices are calculated</h2>
-          <p class="section-sub">With "Loyalty card prices" switched on, the podium shows pump price minus the
-            discount a new cardholder gets (the entry level). Bigger discounts need more fuel or spend per month.
+          <p class="section-sub">With "Loyalty card prices" switched on, the dashboard shows pump price minus your
+            card's discount. Set your level per company in Settings (the default is the entry level a new
+            cardholder gets). Bigger discounts need more fuel or spend per month.
             Discounts as published on each company's own site, checked 03 Oct 2026.</p>
         </div>
       </div>
       <div class="table-scroll">
-        <table class="board" id="loyaltyTable">
+        <table class="board stack" id="loyaltyTable">
           <thead>
-            <tr><th>Company</th><th>Card</th><th class="num">Used here</th><th>All levels (GEL per liter)</th><th>Source</th></tr>
+            <tr><th>Company</th><th>Card</th><th class="num">Your card</th><th>All levels (GEL per liter)</th><th>Source</th></tr>
           </thead>
           <tbody></tbody>
         </table>
@@ -820,6 +1069,43 @@
     </section>
     <p class="footnote">Prices shown are each company's standard pump price unless "Loyalty card prices" is on. Some
       brands (e.g. Wissol) also list a lower self-service price, which is not used here.</p>
+  </div>
+
+  <div class="tab-panel" id="tab-settings">
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Settings</p>
+          <h2 class="section-title">Your preferences</h2>
+          <p class="section-sub">Saved automatically in this browser, so the dashboard opens the way you set it.
+            Nothing is sent anywhere.</p>
+        </div>
+        <div class="section-tools"><span class="save-status" id="saveStatus" role="status" aria-live="polite"></span></div>
+      </div>
+
+      <div class="settings-block">
+        <h3 class="settings-label">Default fuel</h3>
+        <p class="settings-help">The fuel the "Cheapest right now" podium (and the phone charts) open on. You can
+          still switch at any time.</p>
+        <div class="fuel-switch" id="defaultFuelSwitch" role="radiogroup" aria-label="Default fuel"></div>
+      </div>
+
+      <div class="settings-block">
+        <h3 class="settings-label">Your loyalty cards</h3>
+        <p class="settings-help">Pick the level you have at each company. "Loyalty card prices" on the dashboard then
+          uses your discounts.</p>
+        <div class="settings-grid" id="settingsGrid"></div>
+      </div>
+      <div class="settings-row">
+        <button type="button" class="card-switch" id="defaultCardToggle" role="switch" aria-checked="false">
+          Open with my card prices on
+          <span class="track" aria-hidden="true"><span class="ball"></span></span>
+        </button>
+        <button type="button" class="text-button" id="resetSettings">Reset to defaults</button>
+      </div>
+    </section>
+    <p class="footnote">Discount levels are as published on each company's own site (see Sources). Card levels usually
+      depend on last month's fuel or spend, so update them here when your level changes.</p>
   </div>
 
 </main>
@@ -886,27 +1172,85 @@ const sources = [
 const TANK_LITERS = 50;
 
 // Loyalty card discounts (GEL per liter, every fuel type), from each company's own site, 2026-10-03.
-// The dashboard applies the ENTRY level, which any new cardholder gets; higher levels are listed in Sources.
+// Each company lists its levels (first = entry level, the default). The user's level per company
+// is chosen in Settings and saved in this browser.
 const tbilisiWeekday = () =>
   new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "Asia/Tbilisi" }).format(new Date());
 const loyaltyCards = [
-  { company: "Wissol", card: "Wissol card", discount: () => 0.15,
-    levels: "Silver 0.15 on sign-up · Gold 0.20 (500–1,000 GEL spent/month) · Platinum 0.25 (over 1,000 GEL/month)",
-    url: "https://wissol.ge/en/retail/loyalty-program" },
-  { company: "SOCAR", card: "Energy Card", discount: () => 0.15,
-    levels: "0.15 (0–80 L bought last month) · 0.20 (80–150 L) · 0.25 (150+ L) · PRIME subscription: flat 0.30 for 15 GEL/month",
-    url: "https://sgp.ge/en/e-card" },
-  { company: "Gulf", card: "Gulf Club", discount: () => (["Wed", "Sun"].includes(tbilisiWeekday()) ? 0.15 : 0.10),
-    levels: "0.10 every day · 0.15 on Wednesdays and Sundays",
-    url: "https://gulf.ge/en/gulf_club" },
-  { company: "Lukoil", card: "Lukoil card", discount: () => 0.15,
-    levels: "0.15–0.23 depending on volume, from a purchase of at least 50 L · individual discount from 15,000 L",
-    url: "https://www.lukoil.ge/cards" }
+  { company: "Wissol", card: "Wissol card", url: "https://wissol.ge/en/retail/loyalty-program",
+    levelsText: "Silver 0.15 on sign-up · Gold 0.20 (500–1,000 GEL spent/month) · Platinum 0.25 (over 1,000 GEL/month)",
+    levels: [
+      { id: "silver",   label: "Silver",   discount: 0.15, note: "Automatic on sign-up" },
+      { id: "gold",     label: "Gold",     discount: 0.20, note: "500–1,000 GEL spent per month" },
+      { id: "platinum", label: "Platinum", discount: 0.25, note: "Over 1,000 GEL spent per month" }
+    ] },
+  { company: "SOCAR", card: "Energy Card", url: "https://sgp.ge/en/e-card",
+    levelsText: "0.15 (0–80 L bought last month) · 0.20 (80–150 L) · 0.25 (150+ L) · PRIME subscription: flat 0.30 for 15 GEL/month",
+    levels: [
+      { id: "l0",    label: "0–80 L",   discount: 0.15, note: "Fuel bought last month" },
+      { id: "l80",   label: "80–150 L", discount: 0.20, note: "Fuel bought last month" },
+      { id: "l150",  label: "150+ L",   discount: 0.25, note: "Fuel bought last month" },
+      { id: "prime", label: "PRIME",    discount: 0.30, note: "Subscription, 15 GEL/month" }
+    ] },
+  { company: "Gulf", card: "Gulf Club", url: "https://gulf.ge/en/gulf_club",
+    levelsText: "0.10 every day · 0.15 on Wednesdays and Sundays",
+    levels: [
+      { id: "club", label: "Gulf Club", discount: () => (["Wed", "Sun"].includes(tbilisiWeekday()) ? 0.15 : 0.10),
+        note: "0.10 every day · 0.15 on Wednesdays and Sundays" }
+    ] },
+  { company: "Lukoil", card: "Lukoil card", url: "https://www.lukoil.ge/cards",
+    levelsText: "0.15–0.23 depending on volume, from a purchase of at least 50 L · individual discount from 15,000 L",
+    levels: [
+      { id: "entry", label: "Entry", discount: 0.15, note: "From a purchase of at least 50 L" },
+      { id: "top",   label: "Top",   discount: 0.23, note: "Highest volume level" }
+    ] }
 ];
+const levelDiscount = lv => (typeof lv.discount === "function" ? lv.discount() : lv.discount);
+
+// ---------- Settings (saved in this browser only) ----------
+const SETTINGS_KEY = "gfp.settings.v1";
+const FUEL_KEYS = ["bestDiesel", "euroDiesel", "super", "petrol"];  // same keys as `categories`
+const defaultSettings = () => ({
+  cards: Object.fromEntries(loyaltyCards.map(l => [l.company, l.levels[0].id])),  // entry levels
+  showCardPrices: false,
+  defaultFuel: "bestDiesel"  // the dashboard opens on diesel unless the user picks another fuel
+});
+function loadSettings() {
+  const d = defaultSettings();
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null");
+    if (!saved) return d;
+    loyaltyCards.forEach(l => {  // keep only values that still exist
+      const v = saved.cards && saved.cards[l.company];
+      if (v === "none" || l.levels.some(x => x.id === v)) d.cards[l.company] = v;
+    });
+    d.showCardPrices = !!saved.showCardPrices;
+    if (FUEL_KEYS.includes(saved.defaultFuel)) d.defaultFuel = saved.defaultFuel;
+  } catch (e) { /* storage blocked or corrupt: fall back to defaults */ }
+  return d;
+}
+function saveSettings() {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+let settings = loadSettings();
+
+// The card a brand's price should use: the user's level, or "none" (pays pump price).
 const cardFor = company => {
   const c = loyaltyCards.find(l => l.company === company);
-  return { ...c, discount: c.discount() };
+  const id = settings.cards[company];
+  if (id === "none") return { ...c, none: true, level: null, discount: 0 };
+  const level = c.levels.find(x => x.id === id) || c.levels[0];
+  return { ...c, none: false, level, discount: levelDiscount(level) };
 };
+// "Energy Card 150+ L −0.25 · pump 4.94" / "No card · pump price"
+const cardText = r => (r.card.none
+  ? "No card · pump price"
+  : `${r.card.card}${r.card.levels.length > 1 ? " " + r.card.level.label : ""} −${fmt(r.card.discount)} · pump ${fmt(r.pumpPrice)}`);
 
 // Chart/JS colors read from the CSS tokens so there is one source of truth.
 const css = getComputedStyle(document.documentElement);
@@ -925,13 +1269,13 @@ function bestDiesel(row) {
 // Fuel categories in display order (diesel first: that's the owner's car).
 const categories = [
   { key: "bestDiesel", label: "Best diesel",  sub: "Premium tier; Lukoil has none, so its Euro Diesel is used", pick: bestDiesel,
-    heroEyebrow: "Diesel · best grade per brand", heroTitle: "Cheapest diesel right now" },
+    heroEyebrow: "Diesel · best grade per brand", heroTitle: "Cheapest diesel" },
   { key: "euroDiesel", label: "Euro diesel",  sub: "Plain Euro-5 diesel",              pick: r => r.euroDiesel,
-    heroEyebrow: "Diesel · plain Euro-5",         heroTitle: "Cheapest Euro diesel right now" },
+    heroEyebrow: "Diesel · plain Euro-5",         heroTitle: "Cheapest Euro diesel" },
   { key: "super",      label: "Super",        sub: "Top-octane gasoline",              pick: r => r.super,
-    heroEyebrow: "Gasoline · top octane",         heroTitle: "Cheapest super right now" },
+    heroEyebrow: "Gasoline · top octane",         heroTitle: "Cheapest super" },
   { key: "petrol",     label: "Petrol",       sub: "Regular gasoline (Euro Regular)",  pick: r => r.petrol,
-    heroEyebrow: "Gasoline · Euro Regular",       heroTitle: "Cheapest petrol right now" }
+    heroEyebrow: "Gasoline · Euro Regular",       heroTitle: "Cheapest petrol" }
 ];
 
 // Sorted [{company, name, price, gap, rank, ...}] for a category; ties share a rank.
@@ -957,9 +1301,9 @@ function ranked(cat, withCard = false) {
 }
 
 // ---------- Hero: top 3 for the picked fuel ----------
-// Always opens on diesel (the owner's car); deliberately not remembered between visits.
-let heroKey = "bestDiesel";
-let heroWithCard = false;  // loyalty card prices off by default: pump prices first
+// Opens on the user's default fuel (Settings; Best diesel unless changed).
+let heroKey = settings.defaultFuel;
+let heroWithCard = settings.showCardPrices;  // off unless the user chose "open with my card prices on"
 
 function renderPodium() {
   const cat = categories.find(c => c.key === heroKey);
@@ -977,19 +1321,10 @@ function renderPodium() {
   }
   document.querySelectorAll("#heroTitle > span").forEach(s =>
     s.classList.toggle("current", s.dataset.key === heroKey));
-  document.querySelectorAll("#fuelSwitch button").forEach(b => {
-    const on = b.dataset.key === heroKey;
-    b.setAttribute("aria-checked", on);
-    b.tabIndex = on ? 0 : -1;
-    if (on) {
-      const thumb = document.querySelector(".fuel-switch-thumb");
-      if (thumb) placeIndicator(thumb, b, true);
-    }
-  });
   const toggle = document.getElementById("cardToggle");
   toggle.setAttribute("aria-checked", heroWithCard);
-  document.getElementById("heroMeta").textContent =
-    `GEL per liter · updated ${formatDate(lastUpdated)} · gap shown for a ${TANK_LITERS} L tank`;
+  document.getElementById("heroMeta").innerHTML =
+    `GEL per liter · updated ${formatDate(lastUpdated)}<span class="d-only"> · gap shown for a ${TANK_LITERS} L tank</span>`;
 
   // FLIP: remember where every brand's row was (and its price) before re-rendering.
   const podium = document.getElementById("podium");
@@ -1003,20 +1338,21 @@ function renderPodium() {
   podium.innerHTML = rows.map((r, i) => {
     const gapLine = r.gap === 0
       ? `<div class="podium-gap"><span class="badge solid">Cheapest</span></div>`
-      : `<div class="podium-gap">+${fmt(r.gap)} ₾/L &middot; +${fmt(r.gap * TANK_LITERS)} ₾ per tank</div>`;
-    const cardLine = r.card
-      ? `${r.card.card} −${fmt(r.card.discount)} · pump ${fmt(r.pumpPrice)}`
-      : "";
+      : `<div class="podium-gap">+${fmt(r.gap)} ₾/L<span class="d-only"> &middot; +${fmt(r.gap * TANK_LITERS)} ₾ per tank</span></div>`;
+    const cardLine = r.card ? cardText(r) : "";
+    // Phones: drop the card's name (it's in Sources) so the line fits beside the price.
+    const cardHtml = !r.card ? "" : r.card.none ? "No card · pump price"
+      : `<span class="d-only">${cardLine}</span><span class="m-only">Card −${fmt(r.card.discount)} · pump ${fmt(r.pumpPrice)}</span>`;
     const stdBadge = r.standardOnly
-      ? `<span class="badge"><span class="long">No premium sold</span><span class="short">No premium</span></span>` : "";
+      ? `<span class="badge" title="No premium diesel sold"><span class="long">No premium sold</span><span class="short">Std</span></span>` : "";
     return `
       <div class="podium-row${i === 0 ? " first" : ""}" data-company="${r.company}" data-price="${r.price}">
         <div class="podium-pos${i === 0 ? " p1" : ""}">P${i + 1}</div>
         <img class="logo" src="${r.logo}" alt="${r.company} logo">
-        <div>
+        <div class="podium-info">
           <div class="podium-company">${r.company}</div>
           <div class="podium-product">${r.name}${stdBadge}</div>
-          <div class="podium-card"${cardLine ? ` title="${cardLine}"` : ""}>${cardLine}</div>
+          <div class="podium-card"${cardLine ? ` title="${cardLine}"` : ""}>${cardHtml}</div>
         </div>
         <div class="podium-price">
           <div class="value"><span class="num">${fmt(r.price)}</span><span class="currency">₾</span></div>
@@ -1101,9 +1437,11 @@ function renderKpis() {
 const charts = [];
 
 // Wider tick spacing on narrow panels so the axis labels don't collide.
-const tickInterval = el => (el.clientWidth < 480 ? 0.04 : 0.02);
+// Fewer ticks on narrow panels so the axis labels never collide (phones: cheapest / middle / max).
+const tickInterval = (el, max) => (el.clientWidth < 420 ? max / 2 : el.clientWidth < 480 ? 0.04 : 0.02);
+let gapXMax = 0.16;
 
-let gapWithCard = false;  // loyalty card prices in the gap charts (independent of the podium switch)
+let gapWithCard = settings.showCardPrices;  // gap charts' own switch (independent of the podium switch)
 const gapPanels = [];
 
 // Builds the four chart cards once; updateGapCharts() fills/refreshes them.
@@ -1112,6 +1450,7 @@ function renderCharts() {
   categories.forEach(cat => {
     const card = document.createElement("div");
     card.className = "chart-card";
+    card.dataset.key = cat.key;
     card.innerHTML = `
       <h3>${cat.label}</h3>
       <p class="chart-sub">${cat.sub}</p>
@@ -1131,6 +1470,7 @@ function updateGapCharts() {
     [...ranked(cat), ...ranked(cat, true)].map(r => r.gap)));
   // Rounded to 0.04 so both tick spacings (0.02 wide, 0.04 narrow) land on the max.
   const xMax = Math.max(0.08, Math.ceil((maxGap + 0.005) / 0.04) * 0.04);
+  gapXMax = xMax;
 
   const C = {
     primary: token("--primary"),
@@ -1224,7 +1564,7 @@ function updateGapCharts() {
         type: "value",
         min: 0,
         max: xMax,
-        interval: tickInterval(chart.getDom()),
+        interval: tickInterval(chart.getDom(), xMax),
         axisLine: { show: false },
         axisTick: { show: false },
         splitLine: { lineStyle: { color: C.hairline, width: 1 } },
@@ -1238,6 +1578,7 @@ function updateGapCharts() {
       yAxis: { type: "value", min: -0.5, max: rows.length - 0.5, inverse: true, show: false },
       tooltip: {
         trigger: "item",
+        confine: true,
         backgroundColor: C.elevated,
         borderWidth: 0,
         padding: [10, 14],
@@ -1249,10 +1590,10 @@ function updateGapCharts() {
             ? "Cheapest in this fuel"
             : `+${fmt(r.gap)} ₾/L vs cheapest · +${fmt(r.gap * TANK_LITERS)} ₾ per ${TANK_LITERS} L`;
           const card = r.card
-            ? `<br><span style="color:${C.body}">${r.card.card} −${fmt(r.card.discount)} · pump ${fmt(r.pumpPrice)}</span>`
+            ? `<br><span style="color:${C.body}">${cardText(r)}</span>`
             : "";
           const std = r.standardOnly ? `<br><span style="color:${C.body}">No premium diesel sold, Euro Diesel shown</span>` : "";
-          return `<b>${r.company}</b> · ${r.name}<br>${fmt(r.price)} ₾/L${r.card ? " with card" : ""}${card}<br><span style="color:${C.body}">${gap}</span>${std}`;
+          return `<b>${r.company}</b> · ${r.name}<br>${fmt(r.price)} ₾/L${r.card && !r.card.none ? " with card" : ""}${card}<br><span style="color:${C.body}">${gap}</span>${std}`;
         }
       },
       series: [{ type: "custom", clip: false, data, renderItem }]
@@ -1318,6 +1659,7 @@ function renderHistory() {
 
     const card = document.createElement("div");
     card.className = "chart-card";
+    card.dataset.key = cat.key;
     card.innerHTML = `
       <h3>${cat.label}</h3>
       <div class="chart-stats">
@@ -1365,6 +1707,7 @@ function renderHistory() {
       },
       tooltip: {
         trigger: "axis",
+        confine: true,
         axisPointer: { type: "line", lineStyle: { color: C.body, width: 1, type: "solid" } },
         backgroundColor: C.elevated,
         borderWidth: 0,
@@ -1442,6 +1785,20 @@ function renderBoard() {
   }).join("");
 
   document.getElementById("board").innerHTML = head + `<tbody>${body}</tbody>`;
+
+  // Phones: fuels x companies, so all four brands fit side by side without sideways scrolling.
+  const mHead = `<thead><tr><th><span class="sr-only">Fuel</span></th>${fuelData.map(r =>
+    `<th scope="col"><img class="logo" src="${r.logo}" alt=""><span class="co">${r.company}</span></th>`).join("")}</tr></thead>`;
+  const mBody = boardCats.map(c => `<tr><th scope="row">${c.label}</th>${fuelData.map(r => {
+    const p = c.pick(r);
+    if (!p) return `<td><span class="none" title="Not sold">—</span></td>`;
+    const isMin = p.price === cheapest[c.key];
+    return `<td><span class="price${isMin ? " cheapest" : ""}" title="${r.company} ${p.name}${isMin ? " · cheapest" : ""}">${fmt(p.price)}</span></td>`;
+  }).join("")}</tr>`).join("");
+  document.getElementById("boardMobile").innerHTML = mHead + `<tbody>${mBody}</tbody>`;
+  document.getElementById("boardNote").textContent = fuelData.flatMap(r => r.extras.map(e =>
+    `${r.company} also sells ${e.name} ${fmt(e.price)} ₾ (${e.note}).`)).join(" ") +
+    " Lukoil sells no premium diesel.";
 }
 
 // ---------- Sources ----------
@@ -1449,9 +1806,9 @@ function renderSources() {
   document.querySelector("#sourcesTable tbody").innerHTML = sources.map(s => `
     <tr>
       <td><div class="company-cell"><img class="logo" src="${logoOf(s.company)}" alt="">${s.company}</div></td>
-      <td><a href="${s.url}" target="_blank" rel="noopener">${s.url}</a></td>
-      <td><a href="${s.history}" target="_blank" rel="noopener">${s.history}</a></td>
-      <td>${formatDate(s.checked)}</td>
+      <td data-label="Current prices"><a href="${s.url}" target="_blank" rel="noopener">${s.url}</a></td>
+      <td data-label="Price history"><a href="${s.history}" target="_blank" rel="noopener">${s.history}</a></td>
+      <td data-label="Last checked">${formatDate(s.checked)}</td>
     </tr>`).join("");
 }
 
@@ -1459,11 +1816,78 @@ function renderLoyalty() {
   document.querySelector("#loyaltyTable tbody").innerHTML = loyaltyCards.map(l => `
     <tr>
       <td><div class="company-cell"><img class="logo" src="${logoOf(l.company)}" alt="">${l.company}</div></td>
-      <td>${l.card}</td>
-      <td class="num"><span class="price">−${fmt(l.discount())}</span></td>
-      <td>${l.levels}</td>
-      <td><a href="${l.url}" target="_blank" rel="noopener">${l.url}</a></td>
+      <td data-label="Card">${l.card}</td>
+      <td class="num" data-label="Your card">${(c => c.none
+        ? `<span class="none">No card</span>`
+        : `<span class="price">−${fmt(c.discount)}</span>${l.levels.length > 1 ? `<div class="product">${c.level.label}</div>` : ""}`)(cardFor(l.company))}</td>
+      <td data-label="All levels (GEL per liter)">${l.levelsText}</td>
+      <td data-label="Source"><a href="${l.url}" target="_blank" rel="noopener">${l.url}</a></td>
     </tr>`).join("");
+}
+
+function renderSettings() {
+  document.getElementById("settingsGrid").innerHTML = loyaltyCards.map(l => {
+    const name = `level-${l.company}`;
+    const option = (value, label, note, disc) => `
+      <label class="level">
+        <input type="radio" name="${name}" value="${value}"${settings.cards[l.company] === value ? " checked" : ""}>
+        <span class="level-dot" aria-hidden="true"></span>
+        <span><span class="level-name">${label}</span><span class="level-note">${note}</span></span>
+        <span class="level-disc">${disc}</span>
+      </label>`;
+    return `
+      <fieldset class="settings-card">
+        <legend class="sr-only">${l.company} ${l.card} level</legend>
+        <div class="settings-head">
+          <img class="logo" src="${logoOf(l.company)}" alt="">
+          <div><div class="settings-company">${l.company}</div><div class="settings-cardname">${l.card}</div></div>
+        </div>
+        ${option("none", "No card", "Pay the pump price", "—")}
+        ${l.levels.map(lv => option(lv.id, lv.label, lv.note,
+          typeof lv.discount === "function" ? `−${fmt(levelDiscount(lv))} today` : `−${fmt(lv.discount)}`)).join("")}
+        <a class="settings-link" href="${l.url}" target="_blank" rel="noopener">${l.card} terms ↗</a>
+      </fieldset>`;
+  }).join("");
+  document.getElementById("defaultCardToggle").setAttribute("aria-checked", settings.showCardPrices);
+}
+
+let saveStatusTimer;
+function settingsChanged() {
+  const ok = saveSettings();
+  const status = document.getElementById("saveStatus");
+  status.textContent = ok ? "✓ Saved in this browser" : "Couldn't save: this browser blocks site storage";
+  if (!reducedMotion()) status.animate([{ opacity: 0 }, { opacity: 1 }], { duration: MOTION.base, easing: MOTION.ease });
+  clearTimeout(saveStatusTimer);
+  saveStatusTimer = setTimeout(() => { status.textContent = ""; }, 2500);
+  // Everything that shows card prices picks up the new levels immediately.
+  renderPodium();
+  if (gapPanels.length) updateGapCharts();
+  renderLoyalty();
+}
+
+let defaultFuelControl;
+function setupSettings() {
+  renderSettings();
+  defaultFuelControl = createSegmented(document.getElementById("defaultFuelSwitch"), categories,
+    settings.defaultFuel, key => {
+      settings.defaultFuel = key;
+      settingsChanged();
+    });
+  document.getElementById("settingsGrid").addEventListener("change", e => {
+    if (e.target.type !== "radio") return;
+    settings.cards[e.target.name.replace("level-", "")] = e.target.value;
+    settingsChanged();
+  });
+  bindCardSwitch(document.getElementById("defaultCardToggle"), on => {
+    settings.showCardPrices = on;
+    settingsChanged();
+  });
+  document.getElementById("resetSettings").addEventListener("click", () => {
+    settings = defaultSettings();
+    renderSettings();
+    defaultFuelControl.set(settings.defaultFuel);
+    settingsChanged();
+  });
 }
 
 function renderFootnote() {
@@ -1507,6 +1931,18 @@ document.querySelectorAll(".tab-button").forEach(btn => {
   });
 });
 
+// Brand (flag + name) = home: back to the Dashboard tab, or to the top if already there.
+document.getElementById("brandHome").addEventListener("click", e => {
+  e.preventDefault();
+  const dashboardTab = document.querySelector('.tab-button[data-tab="dashboard"]');
+  if (dashboardTab.classList.contains("active")) {
+    window.scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" });
+  } else {
+    window.scrollTo(0, 0);
+    dashboardTab.click();
+  }
+});
+
 // ---------- Motion (shared by every animation on the page) ----------
 const MOTION = { fast: 150, base: 250, slow: 450, ease: "cubic-bezier(0.2, 0, 0, 1)" };
 const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1525,8 +1961,16 @@ function tweenNumber(el, from, to, duration = MOTION.slow) {
   requestAnimationFrame(step);
 }
 
+function snapIndicators() {
+  placeIndicator(tabIndicator, document.querySelector(".tab-button.active"), false);
+  segmentedControls.forEach(c => c.snap());
+}
+const indicatorObserver = new ResizeObserver(() => snapIndicators());
+
 // Places a sliding indicator over/under `target` (relative to its positioned parent).
 function placeIndicator(indicator, target, animate) {
+  // Hidden controls (inactive tab, phone-only switch on desktop) have no layout to measure.
+  if (!target || !indicator.offsetParent) return;
   if (!animate) indicator.classList.add("no-anim");
   // Sub-pixel geometry (offsetLeft/Width round to whole pixels and can leave a 1px seam).
   const parent = indicator.offsetParent, p = parent.getBoundingClientRect(), t = target.getBoundingClientRect();
@@ -1598,18 +2042,12 @@ function animateBall(ball, dx, on) {
 }
 
 // ---------- Fuel switch (segmented radio group next to the hero title) ----------
-function setupFuelSwitch() {
-  // Every title is rendered once and stacked (see .hero-title); renderPodium() shows the current one.
-  document.getElementById("heroTitle").innerHTML =
-    categories.map(c => `<span data-key="${c.key}">${c.heroTitle}</span>`).join("");
+// One segmented control implementation for every fuel switch (hero + phone chart switches):
+// radio-group semantics, sliding thumb, arrow-key navigation.
+const segmentedControls = [];
 
-  bindCardSwitch(document.getElementById("cardToggle"), on => {
-    heroWithCard = on;
-    renderPodium();
-  });
-
-  const group = document.getElementById("fuelSwitch");
-  group.innerHTML = categories.map(c =>
+function createSegmented(group, items, initialKey, onSelect) {
+  group.innerHTML = items.map(c =>
     `<button type="button" role="radio" data-key="${c.key}">${c.label}</button>`).join("");
   const buttons = [...group.querySelectorAll("button")];
   const thumb = document.createElement("span");
@@ -1617,13 +2055,21 @@ function setupFuelSwitch() {
   thumb.setAttribute("aria-hidden", "true");
   group.appendChild(thumb);  // appended last so button nth-child rules are unaffected
 
+  let current = initialKey;
+  const sync = animate => buttons.forEach(b => {
+    const on = b.dataset.key === current;
+    b.setAttribute("aria-checked", on);
+    b.tabIndex = on ? 0 : -1;
+    if (on) placeIndicator(thumb, b, animate);
+  });
   const select = (i, focus) => {
-    heroKey = buttons[i].dataset.key;
-    renderPodium();
+    if (buttons[i].dataset.key === current) return;
+    current = buttons[i].dataset.key;
+    sync(true);
+    onSelect(current);
     if (focus) buttons[i].focus();
   };
   buttons.forEach((b, i) => b.addEventListener("click", () => select(i, false)));
-  // Radio-group keyboard pattern: arrows move and select, wrapping around.
   group.addEventListener("keydown", e => {
     const i = buttons.indexOf(document.activeElement);
     const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
@@ -1631,11 +2077,56 @@ function setupFuelSwitch() {
     e.preventDefault();
     select((i + step + buttons.length) % buttons.length, true);
   });
+
+  const control = {
+    snap: () => sync(false),
+    set: key => { current = key; sync(true); }
+  };
+  segmentedControls.push(control);
+  buttons.forEach(b => indicatorObserver.observe(b));
+  sync(false);
+  return control;
+}
+
+function setupFuelSwitch() {
+  // Every title is rendered once and stacked (see .hero-title); renderPodium() shows the current one.
+  document.getElementById("heroTitle").innerHTML =
+    categories.map(c => `<span data-key="${c.key}">${c.heroTitle}<span class="d-only"> right now</span></span>`).join("");
+
+  bindCardSwitch(document.getElementById("cardToggle"), on => {
+    heroWithCard = on;
+    renderPodium();
+  });
+
+  createSegmented(document.getElementById("fuelSwitch"), categories, heroKey, key => {
+    heroKey = key;
+    renderPodium();
+  });
+}
+
+// Phones: a chart section shows one fuel at a time, chosen with its own switch (desktop shows all 4).
+function setupChartSwitch(switchId, gridId) {
+  const grid = document.getElementById(gridId);
+  const group = document.getElementById(switchId);
+  grid.classList.add("single");
+  const show = (key, animate) => {
+    grid.querySelectorAll(".chart-card").forEach(card => {
+      const on = card.dataset.key === key;
+      card.classList.toggle("is-current", on);
+      if (on && animate && !reducedMotion() && getComputedStyle(group).display !== "none") {
+        card.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }],
+                     { duration: MOTION.slow, easing: MOTION.ease });
+      }
+    });
+    window.dispatchEvent(new Event("resize"));  // the newly shown chart measures its real size
+  };
+  createSegmented(group, categories, settings.defaultFuel, key => show(key, true));
+  show(settings.defaultFuel, false);
 }
 
 window.addEventListener("resize", () => {
   charts.forEach(c => {
-    c.setOption({ xAxis: { interval: tickInterval(c.getDom()) } });
+    c.setOption({ xAxis: { interval: tickInterval(c.getDom(), gapXMax) } });
     c.resize();
   });
   historyCharts.forEach(c => c.resize());
@@ -1643,29 +2134,27 @@ window.addEventListener("resize", () => {
 
 setupFuelSwitch();
 renderPodium();
-// Indicators start in place (no slide on first paint) and re-align without animating whenever the
-// controls change size (web font arriving, viewport resize), so they never drift off their target.
-function snapIndicators() {
-  placeIndicator(tabIndicator, document.querySelector(".tab-button.active"), false);
-  placeIndicator(document.querySelector(".fuel-switch-thumb"),
-                 document.querySelector('#fuelSwitch button[aria-checked="true"]'), false);
-}
+// Indicators start in place (no slide on first paint); indicatorObserver re-snaps them whenever the
+// controls change size (web font arriving, viewport resize, a hidden switch becoming visible).
 snapIndicators();
-const indicatorObserver = new ResizeObserver(snapIndicators);
-document.querySelectorAll(".tab-button, #fuelSwitch button").forEach(b => indicatorObserver.observe(b));
+document.querySelectorAll(".tab-button").forEach(b => indicatorObserver.observe(b));
 renderKpis();
 renderBoard();
 renderSources();
 renderLoyalty();
+setupSettings();
 renderFootnote();
 // Wait for Inter so chart canvas text doesn't render in the fallback font.
 (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => {
   renderCharts();
+  setupChartSwitch("gapSwitch", "chartGrid");
+  document.getElementById("gapCardToggle").setAttribute("aria-checked", gapWithCard);
   bindCardSwitch(document.getElementById("gapCardToggle"), on => {
     gapWithCard = on;
     updateGapCharts();
   });
   renderHistory();
+  if (window.fuelHistory) setupChartSwitch("historySwitch", "historyGrid");
 });
 </script>
 

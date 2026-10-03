@@ -265,6 +265,53 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   single-accent rule). Band color is the `--band` token (white at 12%). Brand detail is in the
   tooltip. Crosshair and gridlines are solid, never dashed.
 
+### Phone layout (≤760px; user asked for an optimized, professional mobile view)
+- Utilities: `.d-only`/`.m-only` (inline) and `.only-desktop`/`.only-mobile` (block) swap content.
+  `.fuel-switch.mobile-switch` needs the double class to beat `.fuel-switch { display:grid }`.
+- Header: ≤420px shows the flag only (`.brand-text` hidden) so DASHBOARD / SOURCES / ⚙ fit.
+- Brand (flag + name) is a link (`#brandHome`): it returns to the Dashboard tab, or scrolls to the
+  top if already there (user request). It works with click, tap and keyboard.
+- Hero: titles drop " right now"; meta drops the tank note; fuel switch is a full-width 2×2.
+- Podium: one compact line per brand (pos | logo | name+product+card | price), fixed heights
+  108/92px; gap line shows only "+0.02 ₾/L"; card line shows "Card −0.15 · pump 4.94";
+  the "No premium" badge reads "Std".
+- KPI cards: label + price on one line, station underneath.
+- Gap charts + 5-year history: **one fuel at a time** (user's choice), each with its own
+  phone-only fuel switch (`setupChartSwitch`); desktop still shows all 4. Narrow charts use
+  3 ticks (cheapest / middle / max). Tooltips use `confine: true`.
+- Price board: a separate transposed table (fuels × company logos, `#boardMobile`) so all four
+  brands fit; Sources tables become stacked cards (`.board.stack` + `data-label`).
+- Result at 390px: 6,072px → ~3,160px tall, no horizontal scroll, no console errors.
+
+### iPhone 17 Pro (402×874) / 17 Pro Max (440×956) specifics (user asked to optimize for both)
+- `viewport-fit=cover` + `env(safe-area-inset-*)` on `.wrap`, the nav (status bar in home-screen
+  mode) and the footnote (home indicator). `theme-color`/`color-scheme` #181818; `html` has the canvas
+  background, so iOS overscroll stays dark; `text-size-adjust: 100%`.
+- Add to Home Screen: `site.webmanifest` (standalone, icons 180/192/512 in assets/) + apple-mobile-web-app
+  meta (black-translucent status bar, title "Fuel Prices").
+- Touch: `touch-action: manipulation`, no tap highlight, all `:hover` styles inside
+  `@media (hover: hover)` (iOS sticky hover). `(pointer: coarse)` → every control ≥44px tall.
+- 430–760px (Pro Max): slightly larger hero title, podium and KPI numbers.
+- Landscape phones (`max-height: 500px` + `pointer: coarse` + width >760): desktop columns but the
+  compact podium (rows 92/76px) and tighter spacing; podium 376px → 244px.
+- Verified at 402/440 portrait and 874/956 landscape (DPR 3, iOS UA): no overflow, no small tap
+  targets, no console errors.
+
+### Settings tab (saved per browser in localStorage key `gfp.settings.v1`)
+- The tab is an **icon-only gear** (18px) after Sources on every screen size. The user asked
+  to remove the "SETTINGS" text; the accessible name is `aria-label`/`title` "Settings".
+- `{ cards: {Wissol, SOCAR, Gulf, Lukoil: levelId | "none"}, showCardPrices, defaultFuel }`.
+  Defaults: entry level everywhere, card prices off, defaultFuel "bestDiesel" (user's rule:
+  diesel is the very default). Values are validated on load; storage access is wrapped in try/catch.
+- Default fuel: the podium and phone chart switches open on it.
+- Loyalty levels per company (radio list incl. "No card"), "Open with my card prices on" switch
+  (sets both card switches on load), "Reset to defaults". Every change auto-saves, shows
+  "✓ Saved in this browser" and re-renders the podium, gap charts and Sources table.
+- `loyaltyCards[].levels` hold each published level (SOCAR: 0–80 / 80–150 / 150+ L / PRIME;
+  Wissol: Silver / Gold / Platinum; Gulf: Gulf Club (0.10, 0.15 Wed/Sun); Lukoil: Entry 0.15 /
+  Top 0.23). `cardFor()` returns the user's level; "none" means pump price.
+- One segmented-control implementation (`createSegmented`) powers every fuel switch.
+
 ### Motion (user asked for smooth, professional animations)
 - Tokens: `--ease` = `cubic-bezier(0.2, 0, 0, 1)` (JS `MOTION.ease`); durations `--dur-fast` 150ms,
   `--dur` 250ms, `--dur-slow` 450ms. All zeroed under `prefers-reduced-motion` (JS checks
@@ -400,3 +447,21 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   red). User asked to publish: per their choices, moved all code from `Desktop\Fuel` into the
   `fuel_prices` repo, added README.md, .gitignore and .vercelignore, renamed the branch to
   `main`, and created the public GitHub repo `lukatcheishvili/fuel_prices` for Vercel to deploy from.
+- **2026-10-03**: Published. GitHub repo https://github.com/lukatcheishvili/fuel_prices (public),
+  Vercel project `georgia-fuel-prices` (git-linked, auto-deploys on push to `main`), live at
+  https://georgia-fuel-prices.vercel.app. Created GitHub release **v1.0.0** (tag on e548fa2) with
+  full release notes (features, data snapshot, loyalty discounts, tech, known limitations). Use
+  semantic versioning for future releases (v1.1.0 for the scraper, etc.).
+- **2026-10-03**: Phone pass, after the user's verdict that desktop looked great and the phone needed work.
+  Compact podium, KPI cards and transposed price board; one-chart-at-a-time phone switches for the gap
+  and history sections; Sources as stacked cards; flag-only header ≤420px. Fixed a hidden-indicator
+  JS error. Page went from 6,072px to ~3,160px at 390px with no overflow. Added a **Settings** tab
+  (gear, after Sources): default fuel (diesel by default), per-company loyalty card level, "open with
+  card prices on", reset, all persisted in localStorage and verified across reloads. README:
+  "built for drivers" generally, not diesel-specific (user correction). Shipped in v1.1.0.
+- **2026-10-03**: Settings tab is icon-only (gear). Brand (flag + name) links back to the Dashboard (or
+  scrolls to the top). iPhone 17 Pro / Pro Max pass: safe areas, theme color, home-screen manifest +
+  icons, 44px touch targets, hover only on hover devices, Pro Max sizing, compact landscape podium.
+  Shipped in v1.1.0.
+- **2026-10-03**: User approved the phone/Settings/iPhone work. Committed, pushed to `main` (Vercel
+  auto-deploy), and published GitHub release **v1.1.0** (v1.0.0 kept as history).
