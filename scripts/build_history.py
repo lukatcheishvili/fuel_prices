@@ -16,6 +16,8 @@ category mapping in AGENT.md.
 import io
 import json
 import re
+import sys
+import time
 import urllib.request
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -25,15 +27,24 @@ import openpyxl
 YEARS = 5
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/128.0 Safari/537.36")
-OUT = Path(__file__).resolve().parent.parent / "data" / "history.js"
+ROOT = Path(__file__).resolve().parent.parent
+OUT = ROOT / "data" / "history.js"
+PRICES = ROOT / "data" / "prices.js"
 
 CATEGORIES = ["premiumDiesel", "euroDiesel", "super", "petrol"]
 
 
-def fetch(url):
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return resp.read()
+def fetch(url, attempts=3):
+    """GET with retries: archive servers are occasionally slow to answer from GitHub's runners."""
+    for attempt in range(1, attempts + 1):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": UA})
+            with urllib.request.urlopen(req, timeout=90) as resp:
+                return resp.read()
+        except Exception:
+            if attempt == attempts:
+                raise
+            time.sleep(10 * attempt)
 
 
 def price(v):
@@ -115,12 +126,50 @@ def daily(points, days):
     return out
 
 
+def read_js_object(path):
+    text = path.read_text(encoding="utf-8")
+    return json.loads(text[text.index("{"):text.rindex("}") + 1])
+
+
+def fallback_points(company):
+    """Change points for a company whose archive is unreachable: its series from the existing
+    history.js, plus the latest price read by update_prices.py (data/prices.js) on its date."""
+    points = {cat: [] for cat in CATEGORIES}
+    if OUT.exists():
+        old = read_js_object(OUT)
+        old_start = date.fromisoformat(old["start"])
+        for cat in CATEGORIES:
+            for i, v in enumerate(old["series"][cat].get(company, [])):
+                points[cat].append((old_start + timedelta(days=i), v))
+    if PRICES.exists():
+        current = read_js_object(PRICES)["companies"].get(company, {})
+        if current.get("checkedAt"):
+            day = date.fromisoformat(current["checkedAt"][:10])
+            for cat in CATEGORIES:
+                entry = current.get(cat)
+                points[cat].append((day, entry["price"] if entry else None))
+    if not any(points.values()):
+        raise RuntimeError(f"no earlier history or current price to fall back on for {company}")
+    return points
+
+
 def main():
-    end = date.today() - timedelta(days=1)  # today's prices come from fuelData in index.html
+    end = date.today() - timedelta(days=1)  # today's prices come from data/prices.js on the page
     start = date(end.year - YEARS, end.month, end.day) + timedelta(days=1)
     days = [start + timedelta(days=i) for i in range((end - start).days + 1)]
 
-    sources = {"Wissol": wissol(), "SOCAR": socar(start, end), "Gulf": gulf(), "Lukoil": lukoil()}
+    readers = {"Wissol": wissol, "SOCAR": lambda: socar(start, end), "Gulf": gulf, "Lukoil": lukoil}
+    sources, fell_back = {}, []
+    for company, read in readers.items():
+        try:
+            sources[company] = read()
+        except Exception as e:
+            # One slow/unreachable archive must not stop the update: keep that company's existing
+            # history and extend it with today's scraped price. Surfaced as a warning in the run.
+            sources[company] = fallback_points(company)
+            fell_back.append(company)
+            print(f"::warning::{company} price archive unavailable ({e}); "
+                  f"extended its existing history with the latest scraped price instead")
     series = {cat: {co: daily(pts[cat], days) for co, pts in sources.items()} for cat in CATEGORIES}
 
     payload = {"generated": date.today().isoformat(), "start": start.isoformat(),
@@ -139,5 +188,9 @@ def main():
         print(f"  {cat:14} last={last}  first-index={first}")
 
 
+    if fell_back:
+        print(f"Used fallback history for: {', '.join(fell_back)}")
+
+
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
