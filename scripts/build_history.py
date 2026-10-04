@@ -153,13 +153,32 @@ def fallback_points(company):
     return points
 
 
+# Companies with no public price archive: their history is built only from the prices read by
+# update_prices.py (data/prices.js), one point per day, starting from when they were added.
+NO_ARCHIVE = ["Rompetrol"]  # added 2026-10-04
+
+
+def latest_prices():
+    """{company: {category: price | None}} from data/prices.js, dated by each company's checkedAt."""
+    if not PRICES.exists():
+        return {}
+    companies = read_js_object(PRICES)["companies"]
+    return {co: (date.fromisoformat(d["checkedAt"][:10]),
+                 {cat: (d[cat]["price"] if d.get(cat) else None) for cat in CATEGORIES})
+            for co, d in companies.items() if d.get("checkedAt")}
+
+
 def main():
-    end = date.today() - timedelta(days=1)  # today's prices come from data/prices.js on the page
+    # The history runs through today: today's value is the live price read by update_prices.py
+    # (archives often lag a day), so the charts end on the same numbers as the podium.
+    end = date.today()
     start = date(end.year - YEARS, end.month, end.day) + timedelta(days=1)
     days = [start + timedelta(days=i) for i in range((end - start).days + 1)]
 
     readers = {"Wissol": wissol, "SOCAR": lambda: socar(start, end), "Gulf": gulf, "Lukoil": lukoil}
     sources, fell_back = {}, []
+    for company in NO_ARCHIVE:
+        sources[company] = fallback_points(company)
     for company, read in readers.items():
         try:
             sources[company] = read()
@@ -170,6 +189,11 @@ def main():
             fell_back.append(company)
             print(f"::warning::{company} price archive unavailable ({e}); "
                   f"extended its existing history with the latest scraped price instead")
+    # Today's live prices override the archives' last point (same-day changes, archive lag).
+    for company, (day, prices) in latest_prices().items():
+        if day == end and company in sources:
+            for cat in CATEGORIES:
+                sources[company][cat].append((day, prices[cat]))
     series = {cat: {co: daily(pts[cat], days) for co, pts in sources.items()} for cat in CATEGORIES}
 
     payload = {"generated": date.today().isoformat(), "start": start.isoformat(),

@@ -126,7 +126,8 @@ and `scripts/build_history.py`, then commits as github-actions[bot] and pushes �
 `checkedAt` changes every run, so there's a commit twice a day.
 - Readers: Wissol = "<name> / Standard Price: / 4.58 ₾" on /en/fuel-prices; SOCAR = "<name> /
   Standard / 4.55" on the homepage; Gulf = first data row of the .xlsx download (skip "(Gulf+)"
-  columns); Lukoil = homepage, where the price comes BEFORE the name.
+  columns); Lukoil = homepage, where the price comes BEFORE the name; Rompetrol = /en homepage table.
+- History now runs through TODAY: the last day uses the live prices from data/prices.js.
 - Validation: present, 1–10 GEL, ≤25% jump vs the previous file; `0.00` = not sold → `null`.
   A failing company keeps its last good data (and older checkedAt) and the run exits 1 (failed run →
   GitHub email). The page treats a null category as "not sold": unranked, "Not sold" on the board,
@@ -175,6 +176,22 @@ below), so always re-verify on the official page before changing these.
 - Gulf's "Gulf+" price columns (≈0.10 lower) are Gulf's self-service network (gulfplus.ge), NOT a
   loyalty discount. Wissol's lower "self-service" price is likewise not a card discount.
 - Wissol's page doesn't say whether the discount differs by fuel type; it's assumed to apply to all fuels.
+
+### Rompetrol Georgia (5th company, added 2026-10-04 at the user's request)
+- Current prices: https://www.rompetrol.ge/en homepage "Fuel Price" table ("Product" / "GEL/l" then
+  name/price pairs; some names stay Georgian on the EN page → aliased in `read_rompetrol()`).
+  Mapping: super = efix Super (98), petrol = efix Euro Regular (92), euroDiesel = Euro Diesel,
+  premiumDiesel = efix Euro Diesel. (efix Euro Premium 95 is not used, like other brands' Premium.)
+- No public price archive (pricerompetrol.ge rejects automated requests). Per the user, its history
+  is collected from the twice-daily readings starting 04 Oct 2026 (`NO_ARCHIVE` in build_history.py).
+- Loyalty: Rompetrol Card, Classic 0.08 (on activation; card given with a 30 GEL purchase), Premium 0.12
+  (80+ L/month for 3 rolling months), Gold 0.15 (120+ L/month for 3 months); any fuel.
+  Source: rompetrol.ge/en/personal/rompetrol-card.
+- Logo: the site only has a 113×31 PNG, so `assets/logos/rompetrol.svg` is the sun symbol **redrawn
+  as a vector** (user approved) matching the official mark: orange scalloped rim, 8 red elliptical
+  petals, white-yellow glow, flat bottom, 40:31 proportions.
+- Layout for 5: gap charts 256px tall; phone price board has 5 logo columns (label column 27%, 8px
+  names); the odd 5th Settings card spans both columns.
 
 ### Logos (`assets/logos/`)
 
@@ -302,7 +319,7 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   brands fit; Sources tables become stacked cards (`.board.stack` + `data-label`).
 - Result at 390px: 6,072px → ~3,160px tall, no horizontal scroll, no console errors.
 
-### iPhone 17 Pro (402×874) / 17 Pro Max (440×956) specifics (user asked to optimize for both)
+### iPhone optimization (describe it publicly only as "optimized for iPhone", no model names: user's request)
 - `viewport-fit=cover` + `env(safe-area-inset-*)` on `.wrap`, the nav (status bar in home-screen
   mode) and the footnote (home indicator). `theme-color`/`color-scheme` #181818; `html` has the canvas
   background, so iOS overscroll stays dark; `text-size-adjust: 100%`.
@@ -310,10 +327,10 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   meta (black-translucent status bar, title "Fuel Prices").
 - Touch: `touch-action: manipulation`, no tap highlight, all `:hover` styles inside
   `@media (hover: hover)` (iOS sticky hover). `(pointer: coarse)` → every control ≥44px tall.
-- 430–760px (Pro Max): slightly larger hero title, podium and KPI numbers.
+- 430–760px (large iPhones): slightly larger hero title, podium and KPI numbers.
 - Landscape phones (`max-height: 500px` + `pointer: coarse` + width >760): desktop columns but the
   compact podium (rows 92/76px) and tighter spacing; podium 376px → 244px.
-- Verified at 402/440 portrait and 874/956 landscape (DPR 3, iOS UA): no overflow, no small tap
+- Verified at 402×874 and 440×956 portrait plus 874×402 and 956×440 landscape (DPR 3, iOS UA): no overflow, no small tap
   targets, no console errors.
 
 ### Settings tab (saved per browser in localStorage key `gfp.settings.v1`)
@@ -484,8 +501,8 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   card prices on", reset, all persisted in localStorage and verified across reloads. README:
   "built for drivers" generally, not diesel-specific (user correction). Shipped in v1.1.0.
 - **2026-10-03**: Settings tab is icon-only (gear). Brand (flag + name) links back to the Dashboard (or
-  scrolls to the top). iPhone 17 Pro / Pro Max pass: safe areas, theme color, home-screen manifest +
-  icons, 44px touch targets, hover only on hover devices, Pro Max sizing, compact landscape podium.
+  scrolls to the top). iPhone optimization pass: safe areas, theme color, home-screen manifest +
+  icons, 44px touch targets, hover only on hover devices, large-phone sizing, compact landscape podium.
   Shipped in v1.1.0.
 - **2026-10-03**: User approved the phone/Settings/iPhone work. Committed, pushed to `main` (Vercel
   auto-deploy), and published GitHub release **v1.1.0** (v1.0.0 kept as history).
@@ -500,3 +517,8 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
 - **2026-10-04**: First Action runs: prices from all 4 sites OK from GitHub; Wissol history API timed out
   → added retry + fallback; re-run green; bot commits auto-deploy on Vercel; live shows "updated 04 Oct
   2026, 14:25".
+- **2026-10-04**: Added **Rompetrol Georgia** (user request): updater reader, loyalty card levels, redrawn
+  vector logo (user chose redraw), history collected from today (user chose this; no public archive),
+  5-company layouts. Petrol P1 is now Rompetrol 3.88. History builder now ends today using live
+  prices. Per the user, removed specific iPhone model names everywhere public (code comments, AGENT.md,
+  v1.1.0 release); say only "optimized for iPhone".

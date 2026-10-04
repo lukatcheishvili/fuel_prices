@@ -533,7 +533,7 @@
   }
   .chart {
     width: 100%;
-    height: 224px;
+    height: 256px;  /* five brand rows */
   }
   .legend {
     display: flex;
@@ -646,13 +646,13 @@
     font-size: 13px;
   }
   table.board.board-t { min-width: 0; table-layout: fixed; }  /* beats the desktop table's 720px minimum */
-  .board-t th, .board-t td { padding: 12px 6px; text-align: center; vertical-align: middle; }
-  .board-t th:first-child, .board-t td:first-child { text-align: left; padding-left: var(--space-xs); width: 30%; }
+  .board-t th, .board-t td { padding: 12px 3px; text-align: center; vertical-align: middle; }
+  .board-t th:first-child, .board-t td:first-child { text-align: left; padding-left: var(--space-xs); width: 27%; }
   .board-t thead th { text-transform: none; letter-spacing: 0; }
   .board-t .logo { width: 28px; height: 28px; margin: 0 auto 4px; }
-  .board-t .co { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  .board-t .co { display: block; font-size: 8px; font-weight: 600; letter-spacing: 0.2px; text-transform: uppercase; }
   .board-t tbody th { font-size: 13px; font-weight: 600; color: var(--ink); background: none; text-transform: none; letter-spacing: 0; }
-  .board-t .price { font-size: 15px; gap: 5px; }
+  .board-t .price { font-size: 14px; gap: 4px; }
   .board-t .price.cheapest::before { width: 6px; height: 6px; }
   .board-note { color: var(--body); font-size: 12px; margin: var(--space-xs) 0 0; }
   .board-key {
@@ -678,6 +678,7 @@
     background: var(--hairline);
     border: 1px solid var(--hairline);
   }
+  .settings-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .settings-card {
     background: var(--canvas);
     margin: 0;
@@ -894,7 +895,7 @@
     .settings-link { padding-top: 14px; padding-bottom: 14px; }
   }
 
-  /* iPhone 17 Pro Max (440px) and other large phones: use the extra width. */
+  /* Large iPhones and other big phones (430px+): use the extra width. */
   @media (min-width: 430px) and (max-width: 760px) {
     .hero-title { font-size: 30px; }
     .podium-company { font-size: 17px; }
@@ -903,7 +904,7 @@
     .kpi-price { font-size: 30px; }
   }
 
-  /* Phones held sideways (iPhone 17 Pro 874x402, Pro Max 956x440): wide but very short, so keep
+  /* Phones held sideways (e.g. an iPhone in landscape): wide but very short, so keep
      the desktop columns but use the compact podium and tighter spacing. */
   @media (max-height: 500px) and (min-width: 761px) and (pointer: coarse) {
     .hero { padding-top: var(--space-sm); }
@@ -973,7 +974,7 @@
       <div class="section-head">
         <div>
           <h2 class="section-title" id="gapTitle">How much more the others cost</h2>
-          <p class="section-sub">Each dot is a brand's price, measured from the cheapest in that fuel. All four panels
+          <p class="section-sub">Each dot is a brand's price, measured from the cheapest in that fuel. All four fuel panels
             share one scale, so equal gaps look equal.</p>
         </div>
         <div class="section-tools">
@@ -1036,7 +1037,7 @@
         <div>
           <p class="eyebrow">Verification</p>
           <h2 class="section-title">Where these numbers come from</h2>
-          <p class="section-sub">None of the four distributors publishes a public API. Each price is read from the
+          <p class="section-sub">None of the five distributors publishes a public API. Each price is read from the
             company's own official price page.</p>
         </div>
       </div>
@@ -1121,7 +1122,8 @@ const LOGOS = {
   Wissol: "assets/logos/wissol.svg",
   SOCAR:  "assets/logos/socar.svg",
   Gulf:   "assets/logos/gulf.png",
-  Lukoil: "assets/logos/lukoil.png"
+  Lukoil: "assets/logos/lukoil.png",
+  Rompetrol: "assets/logos/rompetrol.svg"  // added 2026-10-04
 };
 const priceFeed = window.fuelPrices;
 const fuelData = Object.entries(LOGOS).map(([company, logo]) => ({ company, logo, ...priceFeed.companies[company] }));
@@ -1137,7 +1139,9 @@ const sources = [
   { company: "Gulf",   url: "https://gulf.ge/en/fuel_prices",    checked: priceFeed.companies.Gulf.checkedAt.slice(0, 10),
     history: "https://gulf.ge/en/fuel_prices/download" },
   { company: "Lukoil", url: "https://www.lukoil.ge/",            checked: priceFeed.companies.Lukoil.checkedAt.slice(0, 10),
-    history: "https://www.lukoil.ge/prices-history" }
+    history: "https://www.lukoil.ge/prices-history" },
+  { company: "Rompetrol", url: "https://www.rompetrol.ge/en",     checked: priceFeed.companies.Rompetrol.checkedAt.slice(0, 10),
+    history: null }  // no public archive: history is collected from the twice-daily readings since 04 Oct 2026
 ];
 
 const TANK_LITERS = 50;
@@ -1174,6 +1178,13 @@ const loyaltyCards = [
     levels: [
       { id: "entry", label: "Entry", discount: 0.15, note: "From a purchase of at least 50 L" },
       { id: "top",   label: "Top",   discount: 0.23, note: "Highest volume level" }
+    ] },
+  { company: "Rompetrol", card: "Rompetrol Card", url: "https://www.rompetrol.ge/en/personal/rompetrol-card",
+    levelsText: "Classic 0.08 on activation · Premium 0.12 (80+ L/month for 3 months) · Gold 0.15 (120+ L/month for 3 months)",
+    levels: [
+      { id: "classic", label: "Classic", discount: 0.08, note: "On activation (card with a 30 GEL purchase)" },
+      { id: "premium", label: "Premium", discount: 0.12, note: "80+ L per month for 3 months" },
+      { id: "gold",    label: "Gold",    discount: 0.15, note: "120+ L per month for 3 months" }
     ] }
 ];
 const levelDiscount = lv => (typeof lv.discount === "function" ? lv.discount() : lv.discount);
@@ -1593,7 +1604,7 @@ function historyFor(cat) {
   const brands = fuelData.map(row => {
     // Same rule as bestDiesel(): premium tier, or Euro Diesel for a brand that sells no premium.
     const key = cat.key === "bestDiesel" ? (row.premiumDiesel ? "premiumDiesel" : "euroDiesel") : cat.key;
-    const values = h.series[key][row.company].slice();
+    const values = (h.series[key][row.company] || new Array(n).fill(null)).slice();
     if (addToday) values.push(cat.pick(row) ? cat.pick(row).price : null);
     return { company: row.company, logo: row.logo, values };
   });
@@ -1729,7 +1740,8 @@ function renderHistory() {
   document.getElementById("historyNote").textContent =
     `Daily prices ${formatDate(window.fuelHistory.start)} to ${formatDate(lastUpdated)}, from each company's own ` +
     `price archive (see Sources). Lukoil's archive starts 15 Jul 2022, so before that the band covers Wissol, ` +
-    `SOCAR and Gulf. Best diesel follows the podium rule: Lukoil sells no premium diesel, so its Euro Diesel is used.`;
+    `SOCAR and Gulf. Rompetrol publishes no archive, so its prices join from 04 Oct 2026, collected twice a day. ` +
+    `Best diesel follows the podium rule: Lukoil sells no premium diesel, so its Euro Diesel is used.`;
 }
 
 // ---------- Price board ----------
@@ -1760,7 +1772,7 @@ function renderBoard() {
 
   document.getElementById("board").innerHTML = head + `<tbody>${body}</tbody>`;
 
-  // Phones: fuels x companies, so all four brands fit side by side without sideways scrolling.
+  // Phones: fuels x companies, so all five brands fit side by side without sideways scrolling.
   const mHead = `<thead><tr><th><span class="sr-only">Fuel</span></th>${fuelData.map(r =>
     `<th scope="col"><img class="logo" src="${r.logo}" alt=""><span class="co">${r.company}</span></th>`).join("")}</tr></thead>`;
   const mBody = boardCats.map(c => `<tr><th scope="row">${c.label}</th>${fuelData.map(r => {
@@ -1781,7 +1793,9 @@ function renderSources() {
     <tr>
       <td><div class="company-cell"><img class="logo" src="${logoOf(s.company)}" alt="">${s.company}</div></td>
       <td data-label="Current prices"><a href="${s.url}" target="_blank" rel="noopener">${s.url}</a></td>
-      <td data-label="Price history"><a href="${s.history}" target="_blank" rel="noopener">${s.history}</a></td>
+      <td data-label="Price history">${s.history
+        ? `<a href="${s.history}" target="_blank" rel="noopener">${s.history}</a>`
+        : `<span class="none">No public archive; collected here since 04 Oct 2026</span>`}</td>
       <td data-label="Last checked">${formatDate(s.checked)}</td>
     </tr>`).join("");
 }
@@ -1866,7 +1880,7 @@ function setupSettings() {
 
 function renderFootnote() {
   document.getElementById("dashFootnote").innerHTML =
-    `Prices are read from each distributor's own price page (last checked ${formatDate(lastUpdated)}). None of the four
+    `Prices are read from each distributor's own price page (last checked ${formatDate(lastUpdated)}). None of the five
      publishes a public API, so the prices are read from those pages automatically at 08:00 and 18:00
      Tbilisi time. <strong>Best diesel</strong> is each brand's
      premium diesel; Lukoil sells none, so its Euro Diesel stands in and is marked. Wissol's Diesel Energy is a lower

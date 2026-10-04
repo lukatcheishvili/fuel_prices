@@ -1,4 +1,4 @@
-"""Fetch today's fuel prices from the four official price pages and write data/prices.js.
+"""Fetch today's fuel prices from the five official price pages and write data/prices.js.
 
 Run:  python scripts/update_prices.py      (needs openpyxl)
 Runs automatically at 08:00 and 18:00 Tbilisi time (.github/workflows/update-prices.yml).
@@ -38,6 +38,8 @@ PRODUCTS = {
                "premiumDiesel": "G-Force Euro Diesel"},
     "Lukoil": {"super": "Super Ecto", "petrol": "Euro Regular", "euroDiesel": "Euro Diesel",
                "premiumDiesel": None},  # Lukoil Georgia sells no premium diesel
+    "Rompetrol": {"super": "efix Super", "petrol": "efix Euro Regular", "euroDiesel": "Euro Diesel",
+                  "premiumDiesel": "efix Euro Diesel"},
 }
 EXTRAS = {"Wissol": [("Diesel Energy", "not Euro 5, aimed at machinery")]}
 
@@ -108,7 +110,27 @@ def read_lukoil():
     return found
 
 
-READERS = {"Wissol": read_wissol, "SOCAR": read_socar, "Gulf": read_gulf, "Lukoil": read_lukoil}
+def read_rompetrol():
+    # Homepage "Fuel Price" table:  "Product" / "GEL/l" / <name> / "4.56" / <name> / "4.16" ...
+    # Some names stay in Georgian even on the English page, so they're mapped to English here.
+    aliases = {"efix ევრო რეგულარი": "efix Euro Regular", "efix ევრო დიზელი": "efix Euro Diesel",
+               "ევრო დიზელი": "Euro Diesel"}
+    lines = page_lines("https://www.rompetrol.ge/en")
+    start = lines.index("GEL/l") + 1  # ValueError (-> company failure) if the table is gone
+    found = {}
+    i = start
+    while i + 1 < len(lines):
+        price = to_price(lines[i + 1])
+        if price is None:
+            break  # end of the table
+        name = aliases.get(lines[i], lines[i])
+        found.setdefault(name, price)
+        i += 2
+    return found
+
+
+READERS = {"Wissol": read_wissol, "SOCAR": read_socar, "Gulf": read_gulf, "Lukoil": read_lukoil,
+           "Rompetrol": read_rompetrol}
 
 
 # ---------------- build + validate ----------------
