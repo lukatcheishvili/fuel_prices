@@ -522,3 +522,5 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   5-company layouts. Petrol P1 is now Rompetrol 3.88. History builder now ends today using live
   prices. Per the user, removed specific iPhone model names everywhere public (code comments, AGENT.md,
   v1.1.0 release); say only "optimized for iPhone".
+- **2026-10-04**: Published GitHub release **v1.2.0** (automatic twice-daily updates, Rompetrol, chart-overlap
+  fix) on 8eb1ce6. Releases so far: v1.0.0 launch, v1.1.0 phone/iPhone/Settings, v1.2.0 auto-updates + Rompetrol.
