@@ -119,7 +119,7 @@ website as a plain page/table:
 
 To make prices "live," these four pages need to be scraped on a schedule (not yet built).
 **Prices update automatically** (since 2026-10-04): `.github/workflows/update-prices.yml` runs at
-08:00, 11:00, 15:00 and 18:00 Tbilisi (cron `0 4,7,11,14 * * *`, UTC+4, no DST; user's choice, see the
+08:07, 11:07, 15:07 and 18:07 Tbilisi (cron `7 4,7,11,14 * * *`, UTC+4, no DST; user's choice, see the
 2026-10-04 log for the data behind it) plus a manual "Run
 workflow". It runs `scripts/update_prices.py` → `data/prices.js` (`window.fuelPrices` =
 { checkedAt, companies: { <Co>: { super, petrol, euroDiesel, premiumDiesel, extras, checkedAt } } })
@@ -530,3 +530,5 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   between 07:00 and 11:00 (63/105 in the 09:00 hour), so the old 08:00 run missed most same-day changes until
   18:00. I suggested :07 past the hour to dodge GitHub's top-of-hour scheduling delays; the user chose on-the-hour
   times, so runs may start a few minutes late.
+- **2026-10-04**: Schedule moved to **:07 past the hour** (08:07, 11:07, 15:07, 18:07 Tbilisi; cron
+  `7 4,7,11,14 * * *`) at the user's request, to avoid GitHub's top-of-hour scheduling delays.
