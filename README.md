@@ -33,11 +33,11 @@ in [`DESIGN.md`](DESIGN.md).
 ```
 index.html                    the dashboard
 assets/                       favicon, flag, company logos
-data/prices.js                current prices (generated twice a day)
+data/prices.js                current prices (generated four times a day)
 data/history.js               5-year daily price history (generated)
 scripts/update_prices.py      reads the five official price pages -> data/prices.js
 scripts/build_history.py      rebuilds data/history.js from the companies' official archives
-.github/workflows/update-prices.yml   runs both scripts at 08:00 and 18:00 Tbilisi
+.github/workflows/update-prices.yml   runs both scripts at 08:00, 11:00, 15:00 and 18:00 Tbilisi
 AGENT.md                   project notes, decisions and log (read this first when contributing)
 DESIGN.md                  full design system reference
 ```
@@ -53,8 +53,8 @@ price page. The history comes from their official archives (SOCAR and Wissol API
 download, Lukoil's history table). Rompetrol publishes no archive, so its history is collected by
 this project from 04 Oct 2026 onward.
 
-**Automatic updates:** a GitHub Action (`.github/workflows/update-prices.yml`) runs at **08:00 and
-18:00 Tbilisi time**. It reads the five price pages, refreshes the history, and commits the new
+**Automatic updates:** a GitHub Action (`.github/workflows/update-prices.yml`) runs at **08:00, 11:00,
+15:00 and 18:00 Tbilisi time**. It reads the five price pages, refreshes the history, and commits the new
 data; the push redeploys the site on Vercel. Every price is validated (must exist, 1–10 GEL, no
 jump over 25%; 0.00 means "not sold"). If a site fails, its last good prices are kept and the run is
 marked failed so GitHub emails you. You can also start it by hand: **Actions → Update fuel prices →

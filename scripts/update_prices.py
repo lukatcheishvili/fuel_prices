@@ -1,7 +1,7 @@
 """Fetch today's fuel prices from the five official price pages and write data/prices.js.
 
 Run:  python scripts/update_prices.py      (needs openpyxl)
-Runs automatically at 08:00 and 18:00 Tbilisi time (.github/workflows/update-prices.yml).
+Runs automatically at 08:00, 11:00, 15:00 and 18:00 Tbilisi time (.github/workflows/update-prices.yml).
 
 Every price is validated before anything is written:
   * it must be found on the page and be between 1 and 10 GEL (0.00 = "not sold right now"),

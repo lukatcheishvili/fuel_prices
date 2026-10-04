@@ -119,11 +119,12 @@ website as a plain page/table:
 
 To make prices "live," these four pages need to be scraped on a schedule (not yet built).
 **Prices update automatically** (since 2026-10-04): `.github/workflows/update-prices.yml` runs at
-08:00 and 18:00 Tbilisi (cron `0 4,14 * * *`, UTC+4, no DST; user's choice) plus a manual "Run
+08:00, 11:00, 15:00 and 18:00 Tbilisi (cron `0 4,7,11,14 * * *`, UTC+4, no DST; user's choice, see the
+2026-10-04 log for the data behind it) plus a manual "Run
 workflow". It runs `scripts/update_prices.py` → `data/prices.js` (`window.fuelPrices` =
 { checkedAt, companies: { <Co>: { super, petrol, euroDiesel, premiumDiesel, extras, checkedAt } } })
 and `scripts/build_history.py`, then commits as github-actions[bot] and pushes → Vercel redeploys.
-`checkedAt` changes every run, so there's a commit twice a day.
+`checkedAt` changes every run, so there's a commit (and a Vercel deploy) four times a day.
 - Readers: Wissol = "<name> / Standard Price: / 4.58 ₾" on /en/fuel-prices; SOCAR = "<name> /
   Standard / 4.55" on the homepage; Gulf = first data row of the .xlsx download (skip "(Gulf+)"
   columns); Lukoil = homepage, where the price comes BEFORE the name; Rompetrol = /en homepage table.
@@ -183,7 +184,7 @@ below), so always re-verify on the official page before changing these.
   Mapping: super = efix Super (98), petrol = efix Euro Regular (92), euroDiesel = Euro Diesel,
   premiumDiesel = efix Euro Diesel. (efix Euro Premium 95 is not used, like other brands' Premium.)
 - No public price archive (pricerompetrol.ge rejects automated requests). Per the user, its history
-  is collected from the twice-daily readings starting 04 Oct 2026 (`NO_ARCHIVE` in build_history.py).
+  is collected from the scheduled readings starting 04 Oct 2026 (`NO_ARCHIVE` in build_history.py).
 - Loyalty: Rompetrol Card, Classic 0.08 (on activation; card given with a 30 GEL purchase), Premium 0.12
   (80+ L/month for 3 rolling months), Gold 0.15 (120+ L/month for 3 months); any fuel.
   Source: rompetrol.ge/en/personal/rompetrol-card.
@@ -524,3 +525,8 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   v1.1.0 release); say only "optimized for iPhone".
 - **2026-10-04**: Published GitHub release **v1.2.0** (automatic twice-daily updates, Rompetrol, chart-overlap
   fix) on 8eb1ce6. Releases so far: v1.0.0 launch, v1.1.0 phone/iPhone/Settings, v1.2.0 auto-updates + Rompetrol.
+- **2026-10-04**: Schedule → **08:00, 11:00, 15:00, 18:00 Tbilisi** (user's choice). Data behind it: each brand
+  changes prices every ~5–7 days (any brand on ~93 of 365 days); Lukoil's timestamped log shows 92% of changes
+  between 07:00 and 11:00 (63/105 in the 09:00 hour), so the old 08:00 run missed most same-day changes until
+  18:00. I suggested :07 past the hour to dodge GitHub's top-of-hour scheduling delays; the user chose on-the-hour
+  times, so runs may start a few minutes late.

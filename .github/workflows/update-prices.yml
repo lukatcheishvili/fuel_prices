@@ -1,11 +1,12 @@
 name: Update fuel prices
 
-# Reads the four official price pages and commits fresh data; every push to main redeploys the
+# Reads the five official price pages and commits fresh data; every push to main redeploys the
 # site on Vercel. Georgia is UTC+4 all year (no daylight saving), so:
-#   04:00 UTC = 08:00 Tbilisi,  14:00 UTC = 18:00 Tbilisi.
+#   04:00 UTC = 08:00, 07:00 UTC = 11:00, 11:00 UTC = 15:00, 14:00 UTC = 18:00 Tbilisi.
+# 11:00 catches the morning wave of price changes (most happen 08:00-10:00, peak ~09:00).
 on:
   schedule:
-    - cron: "0 4,14 * * *"
+    - cron: "0 4,7,11,14 * * *"
   workflow_dispatch:  # "Run workflow" button for an update on demand
 
 permissions:
