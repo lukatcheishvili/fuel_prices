@@ -131,6 +131,11 @@ and `scripts/build_history.py`, then commits as github-actions[bot] and pushes �
   A failing company keeps its last good data (and older checkedAt) and the run exits 1 (failed run →
   GitHub email). The page treats a null category as "not sold": unranked, "Not sold" on the board,
   no dot in that gap chart.
+- **Wissol's history API (`api.wissol.ge`) times out from GitHub's runners** (seen on the first two runs;
+  likely blocks non-Georgian/cloud IPs). Wissol's price PAGE works fine. `build_history.py` therefore
+  retries each archive and, if one is unreachable, keeps that company's existing series and extends it
+  with the latest scraped price (warning annotation, run stays green). Running build_history.py locally
+  (from Georgia) rebuilds Wissol's history from its API in full.
 - index.html no longer hard-codes prices: `fuelData` = LOGOS + `window.fuelPrices`; `lastUpdated`
   and the Sources "checked" dates come from the feed; the hero shows "updated <date>, <HH:MM>".
 
@@ -492,3 +497,6 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   GitHub Action at 08:00 and 18:00 Tbilisi (user changed from once a day to twice). The page reads the
   feed; 0.00 = not sold. Verified locally (all 4 parse; validation cases; not-sold simulation; full
   regression). User then raised adding **Rompetrol Georgia**: to investigate next.
+- **2026-10-04**: First Action runs: prices from all 4 sites OK from GitHub; Wissol history API timed out
+  → added retry + fallback; re-run green; bot commits auto-deploy on Vercel; live shows "updated 04 Oct
+  2026, 14:25".
