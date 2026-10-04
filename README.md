@@ -31,10 +31,13 @@ from cdnjs, and the Inter font. No build step. The design follows the Ferrari de
 in [`DESIGN.md`](DESIGN.md).
 
 ```
-index.html                 the dashboard
-assets/                    favicon, flag, company logos
-data/history.js            5-year daily price history (generated)
-scripts/build_history.py   rebuilds data/history.js from the companies' official archives
+index.html                    the dashboard
+assets/                       favicon, flag, company logos
+data/prices.js                current prices (generated twice a day)
+data/history.js               5-year daily price history (generated)
+scripts/update_prices.py      reads the four official price pages -> data/prices.js
+scripts/build_history.py      rebuilds data/history.js from the companies' official archives
+.github/workflows/update-prices.yml   runs both scripts at 08:00 and 18:00 Tbilisi
 AGENT.md                   project notes, decisions and log (read this first when contributing)
 DESIGN.md                  full design system reference
 ```
@@ -47,14 +50,22 @@ Open `index.html` in a browser. No server is needed.
 
 None of the four companies publishes a public API, so current prices are read from each
 company's own price page. The history comes from their official archives (SOCAR and Wissol APIs,
-Gulf's Excel download, Lukoil's history table). To refresh the history:
+Gulf's Excel download, Lukoil's history table).
+
+**Automatic updates:** a GitHub Action (`.github/workflows/update-prices.yml`) runs at **08:00 and
+18:00 Tbilisi time**. It reads the four price pages, refreshes the history, and commits the new
+data; the push redeploys the site on Vercel. Every price is validated (must exist, 1–10 GEL, no
+jump over 25%; 0.00 means "not sold"). If a site fails, its last good prices are kept and the run is
+marked failed so GitHub emails you. You can also start it by hand: **Actions → Update fuel prices →
+Run workflow**.
+
+To run the update locally:
 
 ```
 pip install openpyxl
+python scripts/update_prices.py
 python scripts/build_history.py
 ```
-
-Current prices in `index.html` are still entered by hand; a scheduled scraper is the next step.
 
 ## Deployment
 

@@ -118,7 +118,21 @@ website as a plain page/table:
 - Lukoil: https://www.lukoil.ge/
 
 To make prices "live," these four pages need to be scraped on a schedule (not yet built).
-**Prices are currently NOT updated automatically.** They are hard-coded in `fuelData`.
+**Prices update automatically** (since 2026-10-04): `.github/workflows/update-prices.yml` runs at
+08:00 and 18:00 Tbilisi (cron `0 4,14 * * *`, UTC+4, no DST; user's choice) plus a manual "Run
+workflow". It runs `scripts/update_prices.py` → `data/prices.js` (`window.fuelPrices` =
+{ checkedAt, companies: { <Co>: { super, petrol, euroDiesel, premiumDiesel, extras, checkedAt } } })
+and `scripts/build_history.py`, then commits as github-actions[bot] and pushes → Vercel redeploys.
+`checkedAt` changes every run, so there's a commit twice a day.
+- Readers: Wissol = "<name> / Standard Price: / 4.58 ₾" on /en/fuel-prices; SOCAR = "<name> /
+  Standard / 4.55" on the homepage; Gulf = first data row of the .xlsx download (skip "(Gulf+)"
+  columns); Lukoil = homepage, where the price comes BEFORE the name.
+- Validation: present, 1–10 GEL, ≤25% jump vs the previous file; `0.00` = not sold → `null`.
+  A failing company keeps its last good data (and older checkedAt) and the run exits 1 (failed run →
+  GitHub email). The page treats a null category as "not sold": unranked, "Not sold" on the board,
+  no dot in that gap chart.
+- index.html no longer hard-codes prices: `fuelData` = LOGOS + `window.fuelPrices`; `lastUpdated`
+  and the Sources "checked" dates come from the feed; the hero shows "updated <date>, <HH:MM>".
 
 ### Price history data (`data/history.js`, built by `scripts/build_history.py`)
 
@@ -348,7 +362,7 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
 
 ## What Needs To Be Done
 
-- [ ] Build a scraper (one per company, since markup/structure differs for each) that pulls
+- [x] (Done 2026-10-04: scripts/update_prices.py + GitHub Action.) Build a scraper (one per company, since markup/structure differs for each) that pulls
   current prices from the four source pages above and outputs them in the shape `fuelData`
   already expects in index.html (note the new shape: `{name, price}` objects per category,
   `premiumDiesel` may be null, `extras` array).
@@ -473,3 +487,8 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
 - **2026-10-03**: Fixed the gap charts overlapping their labels (reported by the user with a screenshot):
   any tab switch fired a resize that re-rendered the hidden dashboard charts at 0px width. Hidden charts
   are now skipped. Verified with 13 desktop/phone/rotation scenarios. README links the live site.
+- **2026-10-04**: User noticed the live site still showed 03 Oct. Built automatic updates: a reader per
+  site (`scripts/update_prices.py`) with validation and per-company fallback, `data/prices.js` feed, and a
+  GitHub Action at 08:00 and 18:00 Tbilisi (user changed from once a day to twice). The page reads the
+  feed; 0.00 = not sold. Verified locally (all 4 parse; validation cases; not-sold simulation; full
+  regression). User then raised adding **Rompetrol Georgia**: to investigate next.

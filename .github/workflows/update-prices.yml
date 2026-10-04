@@ -1,0 +1,60 @@
+name: Update fuel prices
+
+# Reads the four official price pages and commits fresh data; every push to main redeploys the
+# site on Vercel. Georgia is UTC+4 all year (no daylight saving), so:
+#   04:00 UTC = 08:00 Tbilisi,  14:00 UTC = 18:00 Tbilisi.
+on:
+  schedule:
+    - cron: "0 4,14 * * *"
+  workflow_dispatch:  # "Run workflow" button for an update on demand
+
+permissions:
+  contents: write  # to commit data/prices.js and data/history.js
+
+concurrency:
+  group: update-prices
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install openpyxl
+
+      # Both data steps may fail independently (a site down, a layout change). The other data is
+      # still committed, and the job is marked failed at the end so GitHub emails the repo owner.
+      - name: Fetch current prices
+        id: prices
+        continue-on-error: true
+        run: python scripts/update_prices.py
+
+      - name: Refresh 5-year history
+        id: history
+        continue-on-error: true
+        run: python scripts/build_history.py
+
+      - name: Commit and push the new data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/prices.js data/history.js
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Update fuel prices $(TZ=Asia/Tbilisi date '+%Y-%m-%d %H:%M') (Tbilisi)"
+          git push
+
+      - name: Flag failed sources
+        if: steps.prices.outcome == 'failure' || steps.history.outcome == 'failure'
+        run: |
+          echo "::error::A price source failed. Its last good prices were kept; see the step logs above."
+          exit 1
