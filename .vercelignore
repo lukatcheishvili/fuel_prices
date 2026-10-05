@@ -4,4 +4,5 @@ AGENT.md
 DESIGN.md
 README.md
 scripts/
+airflow/
 *.py

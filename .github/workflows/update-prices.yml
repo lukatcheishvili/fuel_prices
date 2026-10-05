@@ -23,7 +23,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      # Latest main, not the commit the run was triggered on: a run queued behind another one
+      # (concurrency above) would otherwise start from data that run already replaced, and its
+      # push would be rejected.
       - uses: actions/checkout@v5
+        with:
+          ref: main
 
       - uses: actions/setup-python@v6
         with:

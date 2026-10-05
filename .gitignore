@@ -4,3 +4,8 @@ __pycache__/
 *.pyc
 .DS_Store
 Thumbs.db
+# Airflow (airflow/): secrets and generated files stay on this machine
+.env
+airflow/logs/*
+!airflow/logs/.gitkeep
+airflow/config/airflow.cfg

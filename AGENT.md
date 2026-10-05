@@ -538,3 +538,15 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   moved to quieter minutes with redundancy: cron `19,47 4,7,11,14 * * *` (two runs per slot, 8 a day).
   Still not guaranteed; if slots keep getting dropped, the reliable fix is an external trigger (e.g.
   cron-job.org calling the workflow_dispatch API with a fine-grained token, Actions read/write).
+- **2026-10-05**: Added **Apache Airflow 3.3.2** (`airflow/`) as the main scheduler, at the user's request (also
+  to learn it). Runs on the user's PC in Docker Desktop (user's choice; only works while the PC is on), with
+  LocalExecutor + Postgres (trimmed from the official compose: no Redis/Celery/Flower). DAG `fuel_prices`
+  at 08:05, 11:05, 15:05, 18:05 Tbilisi, catchup off: `trigger_workflow` calls workflow_dispatch with
+  `return_run_details: true` (otherwise 204, no run ID), then sensor `wait_for_run` polls it (30 s, reschedule mode) and fails if the
+  GitHub run fails. Needs the Airflow Variable `github_token` (fine-grained, Actions read/write). The GitHub
+  cron stays as a backup. `.env` files (secrets, UI login) and airflow logs are git-ignored; `airflow/` is in
+  .vercelignore. See airflow/README.md.
+- **2026-10-05**: First Airflow run fixed twice: dispatch needs `return_run_details: true`; a task parameter
+  can't be named `run_id` (reserved by Airflow) → `github_run_id`. Then green end to end. Found a workflow
+  bug on the way: a run queued behind another (concurrency) checked out the SHA it was triggered on, so its
+  push was rejected; checkout now uses `ref: main`.
