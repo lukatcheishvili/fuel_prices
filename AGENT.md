@@ -11,14 +11,16 @@
 
 ## Project Summary
 
-A dashboard tracking live fuel prices for Georgia's four major fuel distributors: **Wissol**,
-**SOCAR Georgia**, **Gulf Georgia**, **Lukoil Georgia**. Currently a single static file:
-`index.html` (vanilla JS + CSS, Apache ECharts 6.1.0 via cdnjs, Inter via Google Fonts).
-No build step, no backend yet. Logos live in `assets/logos/`. All code lives in the git repo
+A dashboard tracking live fuel prices for Georgia's five major fuel distributors: **Wissol**,
+**SOCAR Georgia**, **Gulf Georgia**, **Lukoil Georgia**, **Rompetrol Georgia** (added 2026-10-04).
+A single static file: `index.html` (vanilla JS + CSS, Apache ECharts 6.1.0 via cdnjs, Inter via
+Google Fonts) reading `data/prices.js` and `data/history.js`, which a GitHub Action regenerates and
+commits; Apache Airflow on the user's PC (`airflow/`) starts that Action on schedule.
+No build step, no backend. Logos live in `assets/logos/`. All code lives in the git repo
 `Desktop\Fuel\fuel_prices` (moved there 2026-10-03), pushed to the public GitHub repo
 `lukatcheishvili/fuel_prices` (branch `main`) and deployed on Vercel (team
-`lukatcheishvilis-projects`). `.vercelignore` keeps AGENT.md, DESIGN.md, README.md and scripts/
-off the public site.
+`lukatcheishvilis-projects`). `.vercelignore` keeps AGENT.md, DESIGN.md, README.md, scripts/ and
+airflow/ off the public site.
 
 **The user drives a diesel car.** The diesel view is the most important thing on the page and
 must always stay at the very top.
@@ -117,14 +119,25 @@ website as a plain page/table:
   use a browser-like `User-Agent` header, e.g. via curl, to fetch it)
 - Lukoil: https://www.lukoil.ge/
 
-To make prices "live," these four pages need to be scraped on a schedule (not yet built).
-**Prices update automatically** (since 2026-10-04): `.github/workflows/update-prices.yml` runs at
-08, 11, 15 and 18 Tbilisi, each at :19 plus a backup run at :47 (cron `19,47 4,7,11,14 * * *`, UTC+4,
-no DST; user's choice, see the 2026-10-04 and 2026-10-05 logs) plus a manual "Run
-workflow". It runs `scripts/update_prices.py` → `data/prices.js` (`window.fuelPrices` =
+**Prices update automatically** (since 2026-10-04): `.github/workflows/update-prices.yml` is started by
+**two schedulers**, both aimed at 08, 11, 15 and 18 Tbilisi (UTC+4, no DST; user's choice, see the
+2026-10-04 and 2026-10-05 logs), plus the manual "Run workflow" button:
+- **Apache Airflow 3.3.2** (main, since 2026-10-05): `airflow/`, Docker Compose on the user's Windows PC
+  (LocalExecutor + Postgres; UI http://localhost:8080, login in the git-ignored `airflow/.env`). DAG
+  `airflow/dags/fuel_prices.py` at 08:05, 11:05, 15:05, 18:05, catchup off: `trigger_workflow` POSTs
+  workflow_dispatch with `return_run_details: true` and returns the GitHub run ID (XCom); the sensor
+  `wait_for_run(github_run_id)` polls it every 30 s (reschedule mode, 30 min timeout) and fails without
+  retries if the GitHub run fails. Token = Airflow Variable `github_token` (fine-grained, fuel_prices
+  only, Actions read/write). Only runs while the PC and Docker Desktop are on. See airflow/README.md.
+- **GitHub cron** (backup): `19,47 4,7,11,14 * * *` (:19 and :47). Best effort: on 04–05 Oct several
+  slots were dropped or started up to ~1.5 h late.
+- Runs are serialized by the workflow's `concurrency` group, and checkout uses `ref: main`, so a queued
+  run starts from the latest data and its push isn't rejected.
+
+The workflow runs `scripts/update_prices.py` → `data/prices.js` (`window.fuelPrices` =
 { checkedAt, companies: { <Co>: { super, petrol, euroDiesel, premiumDiesel, extras, checkedAt } } })
 and `scripts/build_history.py`, then commits as github-actions[bot] and pushes → Vercel redeploys.
-`checkedAt` changes every run, so there's a commit (and a Vercel deploy) four times a day.
+`checkedAt` changes every run, so every run makes a commit (and a Vercel deploy).
 - Readers: Wissol = "<name> / Standard Price: / 4.58 ₾" on /en/fuel-prices; SOCAR = "<name> /
   Standard / 4.55" on the homepage; Gulf = first data row of the .xlsx download (skip "(Gulf+)"
   columns); Lukoil = homepage, where the price comes BEFORE the name; Rompetrol = /en homepage table.
@@ -389,19 +402,18 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   current prices from the four source pages above and outputs them in the shape `fuelData`
   already expects in index.html (note the new shape: `{name, price}` objects per category,
   `premiumDiesel` may be null, `extras` array).
-- [ ] Decide how/where scraped data is stored and how index.html gets it (static JSON file
-  fetched by the page? small backend/cron job? build step?) — not decided yet.
-- [ ] Decide on a refresh cadence (e.g. hourly/daily) once scraping exists, and drive
-  `lastUpdated` / `sources[].checked` from the scraper instead of hand-editing.
+- [x] (Done 2026-10-04.) Data storage: the Action commits `data/prices.js` and `data/history.js`, which
+  index.html loads as scripts; `lastUpdated` comes from `checkedAt`.
+- [x] (Done 2026-10-04/05.) Refresh cadence: 08, 11, 15, 18 Tbilisi, started by Airflow, GitHub cron as backup.
+- [ ] Airflow only runs while the user's PC is on. If updates are still missed, move `airflow/` to an
+  always-on Linux VM (same compose file and DAG; needs a new `.env`) or use an external trigger.
 - [ ] Confirm with the user whether Lukoil (no premium diesel, Euro Diesel used as fallback)
   should appear on the diesel podium at all.
 - [x] Visual design pass. Done 2026-10-03 with the Ferrari design system (see above).
-- [ ] Consider historical price tracking (the source sites keep price archives/history) if the
-  user wants trend charts later, not just current snapshot.
+- [x] (Done 2026-10-04.) Historical price tracking: 5-year charts from `data/history.js`.
 - [ ] Optional: a card-level selector (entry / top level) for the loyalty switches, or extend
   card prices to the KPI cards and price board (currently podium + gap charts).
-- [ ] Re-run `scripts/build_history.py` on the same schedule as the scraper so the 5-year
-  charts stay current (it already fetches all four official archives).
+- [x] (Done 2026-10-04.) `scripts/build_history.py` runs in the same workflow as the price update.
 - [x] Moved all code into the `fuel_prices` git repo, pushed to GitHub, deployed on Vercel
   (2026-10-03).
 
@@ -550,3 +562,6 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   can't be named `run_id` (reserved by Airflow) → `github_run_id`. Then green end to end. Found a workflow
   bug on the way: a run queued behind another (concurrency) checked out the SHA it was triggered on, so its
   push was rejected; checkout now uses `ref: main`.
+- **2026-10-05**: First fully green Airflow run (11:05 slot, run manually after unpausing; tries 3 because of
+  the two fixes above). User confirmed it in the UI. Updated README (Data + file list) and AGENT.md (summary
+  now five companies and the Airflow setup; stale to-dos ticked off; new to-do: Airflow needs the PC on).

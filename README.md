@@ -37,7 +37,8 @@ data/prices.js                current prices (updated four times a day)
 data/history.js               5-year daily price history (generated)
 scripts/update_prices.py      reads the five official price pages -> data/prices.js
 scripts/build_history.py      rebuilds data/history.js from the companies' official archives
-.github/workflows/update-prices.yml   runs both scripts four times a day (08, 11, 15, 18 Tbilisi; at :19 and :47)
+.github/workflows/update-prices.yml   runs both scripts and commits the new data
+airflow/                   Apache Airflow (Docker) that starts the workflow on schedule
 AGENT.md                   project notes, decisions and log (read this first when contributing)
 DESIGN.md                  full design system reference
 ```
@@ -53,10 +54,17 @@ price page. The history comes from their official archives (SOCAR and Wissol API
 download, Lukoil's history table). Rompetrol publishes no archive, so its history is collected by
 this project from 04 Oct 2026 onward.
 
-**Automatic updates:** a GitHub Action (`.github/workflows/update-prices.yml`) runs four times a day,
-around **08:00, 11:00, 15:00 and 18:00 Tbilisi time** (each at :19 with a backup run at :47, because
-GitHub's scheduler sometimes starts runs late or skips them). It reads the five price pages, refreshes the history, and commits the new
-data; the push redeploys the site on Vercel. Every price is validated (must exist, 1–10 GEL, no
+**Automatic updates:** a GitHub Action (`.github/workflows/update-prices.yml`) reads the five price
+pages, refreshes the history, and commits the new data; the push redeploys the site on Vercel. It is
+started four times a day, around **08:00, 11:00, 15:00 and 18:00 Tbilisi time**, in two ways:
+
+- **Apache Airflow** (`airflow/`, see [`airflow/README.md`](airflow/README.md)) runs in Docker on the
+  maintainer's PC and starts the workflow at 08:05, 11:05, 15:05 and 18:05, then waits for its result.
+  It only runs while that PC is on.
+- **GitHub's own schedule** is the backup: :19 and :47 past the same hours. It's best effort, so GitHub
+  sometimes starts these late or skips them.
+
+Extra runs are harmless: they queue one after another and just re-check the prices. Every price is validated (must exist, 1–10 GEL, no
 jump over 25%; 0.00 means "not sold"). If a site fails, its last good prices are kept and the run is
 marked failed so GitHub emails you. You can also start it by hand: **Actions → Update fuel prices →
 Run workflow**.
