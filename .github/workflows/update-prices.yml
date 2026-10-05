@@ -1,13 +1,14 @@
 name: Update fuel prices
 
 # Reads the five official price pages and commits fresh data; every push to main redeploys the
-# site on Vercel. Georgia is UTC+4 all year (no daylight saving), so:
-#   04:07 UTC = 08:07, 07:07 UTC = 11:07, 11:07 UTC = 15:07, 14:07 UTC = 18:07 Tbilisi.
-# Seven minutes past the hour: GitHub delays jobs scheduled exactly on the hour (its busiest time).
+# site on Vercel. Georgia is UTC+4 all year (no daylight saving).
+# GitHub's scheduler is best effort: under load it starts runs late or drops them, and it is busiest
+# around the top of the hour. So each update slot gets two runs at quiet minutes, :19 and a backup at
+# :47 (Tbilisi 08:19/08:47, 11:19/11:47, 15:19/15:47, 18:19/18:47). If both start, the second just re-checks the prices.
 # 11:00 catches the morning wave of price changes (most happen 08:00-10:00, peak ~09:00).
 on:
   schedule:
-    - cron: "7 4,7,11,14 * * *"
+    - cron: "19,47 4,7,11,14 * * *"
   workflow_dispatch:  # "Run workflow" button for an update on demand
 
 permissions:

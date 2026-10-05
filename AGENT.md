@@ -119,8 +119,8 @@ website as a plain page/table:
 
 To make prices "live," these four pages need to be scraped on a schedule (not yet built).
 **Prices update automatically** (since 2026-10-04): `.github/workflows/update-prices.yml` runs at
-08:07, 11:07, 15:07 and 18:07 Tbilisi (cron `7 4,7,11,14 * * *`, UTC+4, no DST; user's choice, see the
-2026-10-04 log for the data behind it) plus a manual "Run
+08, 11, 15 and 18 Tbilisi, each at :19 plus a backup run at :47 (cron `19,47 4,7,11,14 * * *`, UTC+4,
+no DST; user's choice, see the 2026-10-04 and 2026-10-05 logs) plus a manual "Run
 workflow". It runs `scripts/update_prices.py` → `data/prices.js` (`window.fuelPrices` =
 { checkedAt, companies: { <Co>: { super, petrol, euroDiesel, premiumDiesel, extras, checkedAt } } })
 and `scripts/build_history.py`, then commits as github-actions[bot] and pushes → Vercel redeploys.
@@ -532,3 +532,9 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   times, so runs may start a few minutes late.
 - **2026-10-04**: Schedule moved to **:07 past the hour** (08:07, 11:07, 15:07, 18:07 Tbilisi; cron
   `7 4,7,11,14 * * *`) at the user's request, to avoid GitHub's top-of-hour scheduling delays.
+- **2026-10-05**: User reported the site still showed 04 Oct data. Cause: GitHub's best-effort scheduler, not
+  the scripts. Of the `:07` slots, 04 Oct 15:07 and 05 Oct 08:07 never ran and 04 Oct 18:07 started at 19:45;
+  every run that did start succeeded and deployed. Started a manual run (c27a874, 11:16). At the user's request,
+  moved to quieter minutes with redundancy: cron `19,47 4,7,11,14 * * *` (two runs per slot, 8 a day).
+  Still not guaranteed; if slots keep getting dropped, the reliable fix is an external trigger (e.g.
+  cron-job.org calling the workflow_dispatch API with a fine-grained token, Actions read/write).
