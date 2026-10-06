@@ -236,7 +236,7 @@
     line-height: 1.2;
     letter-spacing: -0.36px;
     margin: 0;
-    /* All four titles share one grid cell and only the current one is visible, so the title
+    /* All the titles share one grid cell and only the current one is visible, so the title
        always reserves the size of the longest one: switching fuel never reflows the layout. */
     display: grid;
   }
@@ -318,7 +318,7 @@
      Equal-width segments, so the control never changes size when the selection changes. */
   .fuel-switch {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     border: 1px solid var(--ink);
     position: relative;
   }
@@ -467,7 +467,7 @@
   /* ---------- Secondary KPI cards ---------- */
   .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 1px;
     background: var(--hairline);
     border: 1px solid var(--hairline);
@@ -508,13 +508,17 @@
   }
 
   /* ---------- Charts ---------- */
+  /* Five fuel panels: a diesel row of two, then a gasoline row of three. */
   .chart-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 1px;
     background: var(--hairline);
     border: 1px solid var(--hairline);
   }
+  .chart-grid .chart-card { grid-column: span 2; }
+  .chart-grid .chart-card[data-key="bestDiesel"],
+  .chart-grid .chart-card[data-key="euroDiesel"] { grid-column: span 3; }
   .chart-card {
     background: var(--canvas);
     padding: var(--space-sm) var(--space-sm) var(--space-xs);
@@ -566,7 +570,7 @@
   .chart.tall { height: 260px; }
   .chart-stats {
     display: flex;
-    gap: var(--space-sm);
+    gap: var(--space-xxxs) var(--space-sm);  /* tight rows when the stats wrap in a narrow panel */
     flex-wrap: wrap;
     color: var(--body);
     font-size: 12px;
@@ -761,7 +765,7 @@
   .settings-block + .settings-block { margin-top: var(--space-lg); }
   .settings-label { font-size: 18px; font-weight: 500; margin: 0; }
   .settings-help { color: var(--body); font-size: 13px; margin: var(--space-xxxs) 0 var(--space-xs); }
-  .settings-block .fuel-switch { width: min(100%, 520px); }
+  .settings-block .fuel-switch { width: min(100%, 640px); }
 
   /* ---------- Sources ---------- */
   .board a {
@@ -788,6 +792,9 @@
   /* ---------- Responsive ---------- */
   @media (max-width: 1024px) {
     .chart-grid { grid-template-columns: 1fr; }
+    .chart-grid .chart-card,
+    .chart-grid .chart-card[data-key] { grid-column: auto; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 760px) {
     .wrap { padding: 0 max(var(--space-xs), env(safe-area-inset-right)) 0 max(var(--space-xs), env(safe-area-inset-left)); }
@@ -810,9 +817,11 @@
     .hero-title { font-size: 28px; }
     .hero-sub { flex-direction: column; align-items: flex-start; gap: var(--space-xs); margin: var(--space-xs) 0 var(--space-sm); }
 
-    /* Fuel switches: full-width 2x2, phone-only switches above the chart sections */
-    .fuel-switch { width: 100%; grid-template-columns: repeat(2, 1fr); }
-    .fuel-switch button { height: 40px; }
+    /* Fuel switches: full width on two rows (the two diesels, then the three gasolines);
+       phone-only switches sit above the chart sections */
+    .fuel-switch { width: 100%; grid-template-columns: repeat(6, 1fr); }
+    .fuel-switch button { height: 40px; grid-column: span 2; padding: 0 var(--space-xxs); }
+    .fuel-switch button:nth-child(-n+2) { grid-column: span 3; }
     .fuel-switch button:nth-child(3) { border-left: none; }
     .fuel-switch button:nth-child(n+3) { border-top: 1px solid var(--hairline); }
     .fuel-switch.mobile-switch { display: grid; margin-bottom: var(--space-xs); }
@@ -974,7 +983,7 @@
       <div class="section-head">
         <div>
           <h2 class="section-title" id="gapTitle">How much more the others cost</h2>
-          <p class="section-sub">Each dot is a brand's price, measured from the cheapest in that fuel. All four fuel panels
+          <p class="section-sub">Each dot is a brand's price, measured from the cheapest in that fuel. All five fuel panels
             share one scale, so equal gaps look equal.</p>
         </div>
         <div class="section-tools">
@@ -1015,7 +1024,7 @@
         <div>
           <h2 class="section-title" id="historyTitle">Five years of prices</h2>
           <p class="section-sub">For each fuel, the shaded band runs from the cheapest to the most expensive brand on
-            each day and the line is the brands' average. All four panels share one price scale. Hover for every
+            each day and the line is the brands' average. All five panels share one price scale. Hover for every
             brand's price on that day.</p>
         </div>
         <div class="legend" aria-hidden="true">
@@ -1191,7 +1200,7 @@ const levelDiscount = lv => (typeof lv.discount === "function" ? lv.discount() :
 
 // ---------- Settings (saved in this browser only) ----------
 const SETTINGS_KEY = "gfp.settings.v1";
-const FUEL_KEYS = ["bestDiesel", "euroDiesel", "super", "petrol"];  // same keys as `categories`
+const FUEL_KEYS = ["bestDiesel", "euroDiesel", "super", "premium", "petrol"];  // same keys as `categories`
 const defaultSettings = () => ({
   cards: Object.fromEntries(loyaltyCards.map(l => [l.company, l.levels[0].id])),  // entry levels
   showCardPrices: false,
@@ -1250,15 +1259,18 @@ function bestDiesel(row) {
 }
 
 // Fuel categories in display order (diesel first: that's the owner's car).
+// Octane/cetane in the eyebrows is what the companies publish (2026-10-06, see AGENT.md > Category mapping).
 const categories = [
   { key: "bestDiesel", label: "Best diesel",  sub: "Premium tier; Lukoil has none, so its Euro Diesel is used", pick: bestDiesel,
-    heroEyebrow: "Diesel · best grade per brand", heroTitle: "Cheapest diesel" },
+    heroEyebrow: "Diesel · premium grade · cetane 51+", heroTitle: "Cheapest diesel" },
   { key: "euroDiesel", label: "Euro diesel",  sub: "Plain Euro-5 diesel",              pick: r => r.euroDiesel,
-    heroEyebrow: "Diesel · plain Euro-5",         heroTitle: "Cheapest Euro diesel" },
-  { key: "super",      label: "Super",        sub: "Top-octane gasoline",              pick: r => r.super,
-    heroEyebrow: "Gasoline · top octane",         heroTitle: "Cheapest super" },
-  { key: "petrol",     label: "Petrol",       sub: "Regular gasoline (Euro Regular)",  pick: r => r.petrol,
-    heroEyebrow: "Gasoline · Euro Regular",       heroTitle: "Cheapest petrol" }
+    heroEyebrow: "Diesel · Euro 5 · cetane 51+",  heroTitle: "Cheapest Euro diesel" },
+  { key: "super",      label: "Super",        sub: "Top-octane gasoline, 98 octane",   pick: r => r.super,
+    heroEyebrow: "Gasoline · 98 octane",          heroTitle: "Cheapest super" },
+  { key: "premium",    label: "Premium",      sub: "Premium gasoline, 95 octane",      pick: r => r.premium,
+    heroEyebrow: "Gasoline · 95 octane",          heroTitle: "Cheapest premium" },
+  { key: "petrol",     label: "Petrol",       sub: "Regular gasoline (Euro Regular), 92–93 octane", pick: r => r.petrol,
+    heroEyebrow: "Gasoline · 92–93 octane",       heroTitle: "Cheapest petrol" }
 ];
 
 // Sorted [{company, name, price, gap, rank, ...}] for a category; ties share a rank.
@@ -1308,7 +1320,7 @@ function renderPodium() {
   const toggle = document.getElementById("cardToggle");
   toggle.setAttribute("aria-checked", heroWithCard);
   document.getElementById("heroMeta").innerHTML =
-    `GEL per liter · updated ${formatDate(lastUpdated)}, ${lastUpdatedTime}<span class="d-only"> · gap shown for a ${TANK_LITERS} L tank</span>`;
+    `GEL per liter · updated ${formatDate(lastUpdated)}, ${lastUpdatedTime}`;
 
   // FLIP: remember where every brand's row was (and its price) before re-rendering.
   const podium = document.getElementById("podium");
@@ -1322,7 +1334,7 @@ function renderPodium() {
   podium.innerHTML = rows.map((r, i) => {
     const gapLine = r.gap === 0
       ? `<div class="podium-gap"><span class="badge solid">Cheapest</span></div>`
-      : `<div class="podium-gap">+${fmt(r.gap)} ₾/L<span class="d-only"> &middot; +${fmt(r.gap * TANK_LITERS)} ₾ per tank</span></div>`;
+      : `<div class="podium-gap">+${fmt(r.gap)} ₾/L<span class="d-only"> &middot; +${fmt(r.gap * TANK_LITERS)} ₾ per ${TANK_LITERS} L tank</span></div>`;
     const cardLine = r.card ? cardText(r) : "";
     // Phones: drop the card's name (it's in Sources) so the line fits beside the price.
     const cardHtml = !r.card ? "" : r.card.none ? "No card · pump price"
@@ -1428,7 +1440,7 @@ let gapXMax = 0.16;
 let gapWithCard = settings.showCardPrices;  // gap charts' own switch (independent of the podium switch)
 const gapPanels = [];
 
-// Builds the four chart cards once; updateGapCharts() fills/refreshes them.
+// Builds the five chart cards once; updateGapCharts() fills/refreshes them.
 function renderCharts() {
   const grid = document.getElementById("chartGrid");
   categories.forEach(cat => {
@@ -1604,7 +1616,7 @@ function historyFor(cat) {
   const brands = fuelData.map(row => {
     // Same rule as bestDiesel(): premium tier, or Euro Diesel for a brand that sells no premium.
     const key = cat.key === "bestDiesel" ? (row.premiumDiesel ? "premiumDiesel" : "euroDiesel") : cat.key;
-    const values = (h.series[key][row.company] || new Array(n).fill(null)).slice();
+    const values = ((h.series[key] || {})[row.company] || new Array(n).fill(null)).slice();
     if (addToday) values.push(cat.pick(row) ? cat.pick(row).price : null);
     return { company: row.company, logo: row.logo, values };
   });
@@ -1740,7 +1752,7 @@ function renderHistory() {
   document.getElementById("historyNote").textContent =
     `Daily prices ${formatDate(window.fuelHistory.start)} to ${formatDate(lastUpdated)}, from each company's own ` +
     `price archive (see Sources). Lukoil's archive starts 15 Jul 2022, so before that the band covers Wissol, ` +
-    `SOCAR and Gulf. Rompetrol publishes no archive, so its prices join from 04 Oct 2026, collected four times a day. ` +
+    `SOCAR and Gulf. Rompetrol publishes no archive, so its prices join from 04 Oct 2026 (premium from 06 Oct), collected four times a day. ` +
     `Best diesel follows the podium rule: Lukoil sells no premium diesel, so its Euro Diesel is used.`;
 }
 
@@ -1751,6 +1763,7 @@ function renderBoard() {
     { key: "premiumDiesel", label: "Premium diesel", pick: r => r.premiumDiesel },
     { key: "euroDiesel",    label: "Euro diesel",    pick: r => r.euroDiesel },
     { key: "super",         label: "Super",          pick: r => r.super },
+    { key: "premium",       label: "Premium",        pick: r => r.premium },
     { key: "petrol",        label: "Petrol",         pick: r => r.petrol }
   ];
   const premiumMin = Math.min(...fuelData.filter(r => r.premiumDiesel).map(r => r.premiumDiesel.price));
@@ -2093,7 +2106,7 @@ function setupFuelSwitch() {
   });
 }
 
-// Phones: a chart section shows one fuel at a time, chosen with its own switch (desktop shows all 4).
+// Phones: a chart section shows one fuel at a time, chosen with its own switch (desktop shows all 5).
 function setupChartSwitch(switchId, gridId) {
   const grid = document.getElementById(gridId);
   const group = document.getElementById(switchId);

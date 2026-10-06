@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "data" / "history.js"
 PRICES = ROOT / "data" / "prices.js"
 
-CATEGORIES = ["premiumDiesel", "euroDiesel", "super", "petrol"]
+CATEGORIES = ["premiumDiesel", "euroDiesel", "super", "premium", "petrol"]
 
 
 def fetch(url, attempts=3):
@@ -57,7 +57,8 @@ def price(v):
 
 
 def socar(start, end):
-    codes = {"EURODSL": "premiumDiesel", "DIESEL": "euroDiesel", "SUPER": "super", "EURREG": "petrol"}
+    codes = {"EURODSL": "premiumDiesel", "DIESEL": "euroDiesel", "SUPER": "super", "PREMIUM": "premium",
+             "EURREG": "petrol"}
     url = ("https://sgp.ge/sgp-backend/api/integration/info/get-archive-price-list"
            f"?pageNum=1&daysPerPage=4000&startDate={start - timedelta(days=10)}&endDate={end}")
     rows = json.loads(fetch(url))["ArchivePrice"]["Results"]
@@ -72,7 +73,7 @@ def socar(start, end):
 
 def wissol():
     names = {"ეკო დიზელი": "premiumDiesel", "ევრო დიზელი": "euroDiesel",
-             "ეკო სუპერი": "super", "ევრო რეგულარი": "petrol"}
+             "ეკო სუპერი": "super", "ეკო პრემიუმი": "premium", "ევრო რეგულარი": "petrol"}
     data = json.loads(fetch("https://api.wissol.ge/fuelpricehistory/?days=4000"))["data"]
     points = {c: [] for c in CATEGORIES}
     for s in data:
@@ -84,7 +85,7 @@ def wissol():
 
 def gulf():
     cols = {"G-Force Euro Diesel": "premiumDiesel", "Euro Diesel": "euroDiesel",
-            "G-Force Super": "super", "G-Force Euro Regular": "petrol"}
+            "G-Force Super": "super", "G-Force Premium": "premium", "G-Force Euro Regular": "petrol"}
     wb = openpyxl.load_workbook(io.BytesIO(fetch("https://gulf.ge/en/fuel_prices/download")), read_only=True)
     rows = list(wb.worksheets[0].iter_rows(values_only=True))
     header = list(rows[0])
@@ -105,9 +106,10 @@ def lukoil():
     points = {c: [] for c in CATEGORIES}
     for i, t in enumerate(tokens):
         if re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", t):
-            _, _, sup, _, reg, dsl = tokens[i - 6:i]
+            _, _, sup, prem, reg, dsl = tokens[i - 6:i]
             d = date.fromisoformat(t[:10])
             points["super"].append((d, price(sup)))
+            points["premium"].append((d, price(prem)))
             points["petrol"].append((d, price(reg)))
             points["euroDiesel"].append((d, price(dsl)))
     # Lukoil Georgia sells no premium diesel: premiumDiesel stays empty (null).
@@ -139,7 +141,7 @@ def fallback_points(company):
         old = read_js_object(OUT)
         old_start = date.fromisoformat(old["start"])
         for cat in CATEGORIES:
-            for i, v in enumerate(old["series"][cat].get(company, [])):
+            for i, v in enumerate(old["series"].get(cat, {}).get(company, [])):
                 points[cat].append((old_start + timedelta(days=i), v))
     if PRICES.exists():
         current = read_js_object(PRICES)["companies"].get(company, {})

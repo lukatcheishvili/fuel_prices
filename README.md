@@ -8,8 +8,8 @@ whatever fuel they use.
 
 ## What it shows
 
-- **Cheapest right now:** a P1–P3 podium for Best diesel (the default), Euro diesel, Super or
-  Petrol, with the gap you'd pay per liter and per 50 L tank.
+- **Cheapest right now:** a P1–P3 podium for Best diesel (the default), Euro diesel, Super,
+  Premium or Petrol, with the gap you'd pay per liter and per 50 L tank.
 - **Loyalty card prices:** a switch that re-ranks by price after each company's loyalty-card
   discount (Wissol card, SOCAR Energy Card, Gulf Club, Lukoil card, Rompetrol Card).
 - **How much more the others cost:** gap-to-cheapest charts for every fuel.

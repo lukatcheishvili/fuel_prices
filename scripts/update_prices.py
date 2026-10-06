@@ -30,16 +30,16 @@ MAX_JUMP = 0.25
 
 # Which product on each site is which dashboard category (see AGENT.md > Category mapping).
 PRODUCTS = {
-    "Wissol": {"super": "Eko Super", "petrol": "Euro Regular", "euroDiesel": "Euro Diesel",
-               "premiumDiesel": "Eko Diesel"},
-    "SOCAR":  {"super": "Nano Super", "petrol": "Nano Euro Regular", "euroDiesel": "Euro 5 Diesel",
-               "premiumDiesel": "Nano Euro 5 Diesel"},
-    "Gulf":   {"super": "G-Force Super", "petrol": "G-Force Euro Regular", "euroDiesel": "Euro Diesel",
-               "premiumDiesel": "G-Force Euro Diesel"},
-    "Lukoil": {"super": "Super Ecto", "petrol": "Euro Regular", "euroDiesel": "Euro Diesel",
-               "premiumDiesel": None},  # Lukoil Georgia sells no premium diesel
-    "Rompetrol": {"super": "efix Super", "petrol": "efix Euro Regular", "euroDiesel": "Euro Diesel",
-                  "premiumDiesel": "efix Euro Diesel"},
+    "Wissol": {"super": "Eko Super", "premium": "Eko Premium", "petrol": "Euro Regular",
+               "euroDiesel": "Euro Diesel", "premiumDiesel": "Eko Diesel"},
+    "SOCAR":  {"super": "Nano Super", "premium": "Nano Premium", "petrol": "Nano Euro Regular",
+               "euroDiesel": "Euro 5 Diesel", "premiumDiesel": "Nano Euro 5 Diesel"},
+    "Gulf":   {"super": "G-Force Super", "premium": "G-Force Premium", "petrol": "G-Force Euro Regular",
+               "euroDiesel": "Euro Diesel", "premiumDiesel": "G-Force Euro Diesel"},
+    "Lukoil": {"super": "Super Ecto", "premium": "Premium Avangard", "petrol": "Euro Regular",
+               "euroDiesel": "Euro Diesel", "premiumDiesel": None},  # Lukoil Georgia sells no premium diesel
+    "Rompetrol": {"super": "efix Super", "premium": "efix Euro Premium", "petrol": "efix Euro Regular",
+                  "euroDiesel": "Euro Diesel", "premiumDiesel": "efix Euro Diesel"},
 }
 EXTRAS = {"Wissol": [("Diesel Energy", "not Euro 5, aimed at machinery")]}
 

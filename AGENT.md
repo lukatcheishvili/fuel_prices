@@ -33,9 +33,9 @@ must always stay at the very top.
   1. **Diesel hero ("Cheapest diesel right now")**: P1/P2/P3 podium of the 3 cheapest
      "best diesel" prices, ascending. Each row: position number (P1 in Rosso Corsa), brand logo,
      company + product name, price, and gap vs P1 (per liter and per 50 L tank).
-     A **fuel switch** (segmented 4-button group, far right of the title row; it replaced an
+     A **fuel switch** (segmented 5-button group, far right of the title row; it replaced an
      earlier dropdown, see Components) switches the podium between Best diesel / Euro diesel /
-     Super / Petrol and updates eyebrow + title.
+     Super / Premium / Petrol and updates eyebrow + title.
      It always opens on Best diesel (not remembered between visits, on purpose). Ties share a
      position number? NO: positions are numbered straight down the list (P1, P2, P3, P4), even
      when prices are equal (user's explicit rule). Only P1 is red. A brand tied with P1 on price
@@ -54,10 +54,11 @@ must always stay at the very top.
      reserved, so toggling never resizes the podium (verified at 1440/390px for all fuels).
      Card prices are used by the podium and (via their own switch) the gap charts; KPI cards,
      board and history stay on pump prices.
-  2. **Cheapest by fuel**: 3 KPI cards (Euro Diesel, Super, Petrol) with logo(s); ties show
-     every tied brand.
-  3. **"How much more the others cost"**: 4 small-multiple lollipop charts (Best diesel, Euro
-     diesel, Super, Petrol). x = gap from the cheapest (shared scale across panels), y = brands
+  2. **Cheapest by fuel**: 4 KPI cards (Euro Diesel, Super, Premium, Petrol; 2×2 at ≤1024px) with
+     logo(s); ties show every tied brand.
+  3. **"How much more the others cost"**: 5 small-multiple lollipop charts (Best diesel, Euro
+     diesel, Super, Premium, Petrol). Desktop grid = a diesel row of 2 panels, then a gasoline row
+     of 3 (6-column grid, `.chart-grid`; one column at ≤1024px). The history section uses the same grid. x = gap from the cheapest (shared scale across panels), y = brands
      sorted cheapest first with logos as axis labels. Cheapest dot red, others gray.
      Brand labels on the y-axis are LEFT-aligned (logos form one straight column; user request).
      Has its own **"Loyalty card prices"** `card-switch` (top right of the section head, above
@@ -68,7 +69,7 @@ must always stay at the very top.
      All loyalty switches go through `bindCardSwitch(button, onChange)`; reuse it for new ones.
   4. **Price board**: HTML table of every price (companies × fuels) with product names; cheapest
      per column marked with a small red square. Doubles as the accessible table view.
-  5. **"Five years of prices"**: 4 small-multiple line charts (same 4 categories), daily, last
+  5. **"Five years of prices"**: 5 small-multiple line charts (same 5 categories), daily, last
      5 years. Shaded band = cheapest to priciest brand that day (the market's price
      distribution); white line = average of the brands; end label = today's average. Shared
      y-scale (0.50 steps). Stats row per panel: 5-yr low/high (with month) + average today.
@@ -87,6 +88,11 @@ None of the four companies use the same product names, so categories were mapped
 - **Super** = each company's top-octane gasoline: Wissol "Eko Super", SOCAR "Nano Super",
   Gulf "G-Force Super", Lukoil "Super Ecto". (Note: Lukoil also lists "Super Ecto 100" but it
   was priced at 0.00 / out of stock at last check — excluded.)
+- **Premium** (`premium`, added 2026-10-06 after user feedback) = each company's premium (mid-grade)
+  gasoline, between Super and Euro Regular: Wissol "Eko Premium", SOCAR "Nano Premium", Gulf
+  "G-Force Premium", Lukoil "Premium Avangard", Rompetrol "efix Euro Premium". All five sell one, and
+  all four archives have it (SOCAR FuelCode `PREMIUM`, Wissol "ეკო პრემიუმი", Gulf "G-Force Premium"
+  column, Lukoil "Premium Avangard" column). Rompetrol's premium history starts 06 Oct 2026.
 - **Petrol** = each company's base/regular gasoline, which is literally named "Euro Regular"
   (or "Nano Euro Regular" / "G-Force Euro Regular") at all four — the one category with a
   clean 1:1 name match.
@@ -106,6 +112,14 @@ None of the four companies use the same product names, so categories were mapped
   listed, cetane min 46, marketed for machinery), cheaper than Wissol's Euro Diesel. Kept in
   `extras` and shown only as a note on the price board. (The old "Other Diesel" KPI wrongly
   surfaced it as the cheapest "other diesel".)
+- **Octane / cetane shown in the hero eyebrows** (checked 2026-10-06): Super 98, Premium 95 at all five; Petrol
+  92 (Wissol, Lukoil, Rompetrol) but Gulf "G-Force Euro Regular" is 93 (its plain "Euro Regular" is 92), so Petrol
+  reads "92–93 octane". Sources: wissol.ge/en/fuel-prices (product popups), gulf.ge/en/products-and-services/fuel-characteristics,
+  lukoil.ge/about-us (Georgian: RON-98/95/92), rompetrol.ge/en (names carry 98/95/92). **SOCAR publishes no octane
+  on sgp.ge**; 98/95/92–93 comes from a third-party guide (georgiantravelguide.com/en/socar). Diesel has no octane,
+  so the diesel eyebrows show "cetane 51+" (EN 590 / Euro-5 minimum; Wissol lists cetane number ≥51, Gulf cetane
+  index 53.3). The diesel eyebrow used to say "best grade per brand"; the Lukoil fallback is still flagged by the
+  "No premium sold" badge.
 - Prices used are the **standard (full-service) pump price**. Wissol also lists a lower
   self-service price on its page, which is ignored.
 
@@ -287,10 +301,11 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   mass 1; ~0.52s, ~2px overshoot); switching OFF = easeOutBounce over 1.2s. Both curves are
   precomputed as 60fps keyframes. Skipped under `prefers-reduced-motion`. No Motion
   library dependency. Keep this design if the switch is touched again.
-- `fuel-switch`: segmented control (role=radiogroup) of 4 **equal-width** buttons in a 1px
+- `fuel-switch`: segmented control (role=radiogroup) of 5 **equal-width** buttons in a 1px
   white frame, `--hairline` dividers, 46px tall, 13px/600 uppercase 0.65px tracking. Selected
-  segment is inverted (white fill, `--canvas` text). Arrow keys move + select (wrapping). 2×2
-  grid full-width on mobile. Measured constant width (497.5px desktop) whatever is selected.
+  segment is inverted (white fill, `--canvas` text). Arrow keys move + select (wrapping). On phones
+  it is full width on two rows: the 2 diesels, then the 3 gasolines (6-column grid, spans 3/2).
+  Measured constant width (621.4px desktop) whatever is selected.
   - History: this replaced a dropdown. The user disliked (1) the dropdown button resizing with
     label length, and (2) the open menu overlapping the podium, even after styling it as an
     attached menu. **Lesson: don't use overlay dropdowns above the podium / KPI content.**
@@ -321,7 +336,7 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
 - Header: ≤420px shows the flag only (`.brand-text` hidden) so DASHBOARD / SOURCES / ⚙ fit.
 - Brand (flag + name) is a link (`#brandHome`): it returns to the Dashboard tab, or scrolls to the
   top if already there (user request). It works with click, tap and keyboard.
-- Hero: titles drop " right now"; meta drops the tank note; fuel switch is a full-width 2×2.
+- Hero: titles drop " right now"; fuel switch is full width on two rows (diesels, then gasolines).
 - Podium: one compact line per brand (pos | logo | name+product+card | price), fixed heights
   108/92px; gap line shows only "+0.02 ₾/L"; card line shows "Card −0.15 · pump 4.94";
   the "No premium" badge reads "Std".
@@ -350,7 +365,8 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
 ### Settings tab (saved per browser in localStorage key `gfp.settings.v1`)
 - The tab is an **icon-only gear** (18px) after Sources on every screen size. The user asked
   to remove the "SETTINGS" text; the accessible name is `aria-label`/`title` "Settings".
-- `{ cards: {Wissol, SOCAR, Gulf, Lukoil: levelId | "none"}, showCardPrices, defaultFuel }`.
+- `{ cards: {Wissol, SOCAR, Gulf, Lukoil, Rompetrol: levelId | "none"}, showCardPrices, defaultFuel }`
+  (defaultFuel is one of `FUEL_KEYS`, which must match the keys of `categories`).
   Defaults: entry level everywhere, card prices off, defaultFuel "bestDiesel" (user's rule:
   diesel is the very default). Values are validated on load; storage access is wrapped in try/catch.
 - Default fuel: the podium and phone chart switches open on it.
@@ -565,3 +581,15 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
 - **2026-10-05**: First fully green Airflow run (11:05 slot, run manually after unpausing; tries 3 because of
   the two fixes above). User confirmed it in the UI. Updated README (Data + file list) and AGENT.md (summary
   now five companies and the Airflow setup; stale to-dos ticked off; new to-do: Airflow needs the PC on).
+- **2026-10-06**: Added a **Premium** gasoline category (user feedback from site users; e.g. Gulf "G-Force
+  პრემიუმი"). Mapping: Wissol Eko Premium, SOCAR Nano Premium, Gulf G-Force Premium, Lukoil Premium Avangard,
+  Rompetrol efix Euro Premium (Rompetrol cheapest at 4.16 today). Added to update_prices.py (`premium`) and
+  build_history.py (all four archives carry it; 5 years of history). Page: 5-button fuel switch (phones: diesels
+  row + gasolines row), 4 KPI cards, gap/history charts as a diesel row of 2 + gasoline row of 3, Premium column
+  on the price board, Premium as a Settings default fuel. build_history's fallback tolerates a category missing
+  from an older history.js. Verified at 1440/1100/900/390px: no overflow, podium size constant across all 5 fuels,
+  Settings default persists.
+- **2026-10-06**: Hero eyebrows now show octane/cetane instead of descriptions (user request): "Diesel · premium
+  grade · cetane 51+", "Diesel · Euro 5 · cetane 51+", "Gasoline · 98 / 95 / 92–93 octane"; chart subtitles carry
+  the octane too. Sources in Category mapping. Removed "gap shown for a 50 L tank" from the hero meta (user found it
+  unclear); the podium gap line now says "+0.50 ₾ per 50 L tank" itself (desktop; phones show only ₾/L).
