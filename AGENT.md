@@ -112,7 +112,24 @@ None of the four companies use the same product names, so categories were mapped
   listed, cetane min 46, marketed for machinery), cheaper than Wissol's Euro Diesel. Kept in
   `extras` and shown only as a note on the price board. (The old "Other Diesel" KPI wrongly
   surfaced it as the cheapest "other diesel".)
-- **Octane / cetane shown in the hero eyebrows** (checked 2026-10-06): Super 98, Premium 95 at all five; Petrol
+- **Octane / cetane per product (automatic since 2026-10-06).** `update_prices.py` reads each product's figure
+  from the companies' own pages on every run (`SPEC_READERS`) and stores it on the category as
+  `spec: {type: "octane"|"cetane"|"cetane index", value, min, source: "site"|"guide"|"standard"}`. Readers: Wissol
+  price-page popups ("Octane rating: Minimum 98", "Cetane number: Minimum 51"); Gulf fuel-characteristics page
+  (octane minimum; diesel "Cetane index - 53.3", which is a different scale from cetane number); Lukoil about-us
+  ("RON-98 (სუპერი)" ...; no diesel figure); Rompetrol fuels page (grade in the name, "efix Euro Premium 95") +
+  efix page ("Cetane Number: 51.3"; its octane lab results like 98.7 are deliberately NOT used, others only publish
+  grades). SOCAR publishes nothing → `SPEC_FALLBACK` (third-party guide). Diesel without a published figure →
+  `DIESEL_STANDARD` (Euro 5 minimum, cetane 51+). Robustness: a spec page that fails keeps the previous figures
+  (warning, prices unaffected); out-of-range values (octane 80–102, cetane 40–70) are ignored; a changed grade is
+  written and logged as `::warning::... changed 93 -> 94`. The page shows the spec in the podium product line (own
+  line on phones), "Cheapest by fuel" cards, gap-chart rows (second line under the brand) and tooltips with its
+  source. Eyebrows / gasoline chart subtitles compute the range from the data (`specRange`), e.g. "92–93 octane".
+  Layout rules (from an overlap sweep, see log): podium shows the spec inline on wide screens, as its own line
+  (`.podium-spec`) at ≤1024px, and inline again on landscape phones (rows too short for a line). ≤380px the card
+  line drops the word "Card"; ≤340px the podium is tighter (smaller logo/price). The gap charts' label column
+  (`gridLeft`) is sized to the longest name/spec line + 16px, so a cheapest dot never touches a label.
+- **Octane / cetane values found** (checked 2026-10-06): Super 98, Premium 95 at all five; Petrol
   92 (Wissol, Lukoil, Rompetrol) but Gulf "G-Force Euro Regular" is 93 (its plain "Euro Regular" is 92), so Petrol
   reads "92–93 octane". Sources: wissol.ge/en/fuel-prices (product popups), gulf.ge/en/products-and-services/fuel-characteristics,
   lukoil.ge/about-us (Georgian: RON-98/95/92), rompetrol.ge/en (names carry 98/95/92). **SOCAR publishes no octane
@@ -334,8 +351,9 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
 - Utilities: `.d-only`/`.m-only` (inline) and `.only-desktop`/`.only-mobile` (block) swap content.
   `.fuel-switch.mobile-switch` needs the double class to beat `.fuel-switch { display:grid }`.
 - Header: ≤420px shows the flag only (`.brand-text` hidden) so DASHBOARD / SOURCES / ⚙ fit.
-- Brand (flag + name) is a link (`#brandHome`): it returns to the Dashboard tab, or scrolls to the
-  top if already there (user request). It works with click, tap and keyboard.
+- Brand (flag + name) is a link (`#brandHome`): it **reloads the page** (fresh prices), which always opens on the
+  Dashboard tab at the top with the saved Settings applied (user request 2026-10-06; it used to only switch tabs).
+  It scrolls to the top before reloading so the browser restores the reloaded page at the top.
 - Hero: titles drop " right now"; fuel switch is full width on two rows (diesels, then gasolines).
 - Podium: one compact line per brand (pos | logo | name+product+card | price), fixed heights
   108/92px; gap line shows only "+0.02 ₾/L"; card line shows "Card −0.15 · pump 4.94";
@@ -369,7 +387,11 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   (defaultFuel is one of `FUEL_KEYS`, which must match the keys of `categories`).
   Defaults: entry level everywhere, card prices off, defaultFuel "bestDiesel" (user's rule:
   diesel is the very default). Values are validated on load; storage access is wrapped in try/catch.
-- Default fuel: the podium and phone chart switches open on it.
+- Default fuel: the podium and phone chart switches open on it. **Every Settings change applies immediately as well as
+  being saved** (`applyDefaultFuel`, `applyCardDefault`): picking a default fuel switches the podium, hero switch and
+  phone chart switches right away; "open with my card prices on" flips both loyalty switches; Reset restores all of it.
+  (Bug fixed 2026-10-06: these used to apply only after a reload.) A fuel picked on the Dashboard is a one-off and
+  never overwrites the saved default.
 - Loyalty levels per company (radio list incl. "No card"), "Open with my card prices on" switch
   (sets both card switches on load), "Reset to defaults". Every change auto-saves, shows
   "✓ Saved in this browser" and re-renders the podium, gap charts and Sources table.
@@ -384,8 +406,12 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   `reducedMotion()`). Don't invent new curves or durations.
 - Tabs: one `.tab-indicator` underline slides between tabs; the old panel fades out (fast), then
   the new one fades up 8px (slow).
-- Fuel switch: one `.fuel-switch-thumb` (white block) slides/resizes between segments (2D on the
-  mobile 2×2 grid); text colours cross-fade.
+- Fuel switch: `.fuel-switch-thumb` is a full-size white layer holding dark copies of the labels, laid exactly over
+  the buttons and clipped (`clip-path: inset`) to the selected segment (`placeThumb`). The clip glides on `GLIDE`, the
+  loyalty switch's spring model tuned near-critical (stiffness 400, damping 34; ~0.4 s, ~1-2 px settle) because the
+  block travels up to ~500 px, where the ball's spring (11% overshoot) would swing ~50 px. Text inverts exactly where
+  the block is on every frame (no dark-on-dark flash), and a click mid-glide continues from the current position.
+  The real buttons keep their gray text; don't re-add a checked text colour (it flashes during the glide).
 - Indicators are positioned with sub-pixel `getBoundingClientRect` (`placeIndicator`) and
   re-snapped by a ResizeObserver, because the Inter web font loading changes button widths.
 - Hero title: stacked titles cross-fade (out fast, in delayed). Eyebrow fades on change.
@@ -593,3 +619,22 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   grade · cetane 51+", "Diesel · Euro 5 · cetane 51+", "Gasoline · 98 / 95 / 92–93 octane"; chart subtitles carry
   the octane too. Sources in Category mapping. Removed "gap shown for a 50 L tank" from the hero meta (user found it
   unclear); the podium gap line now says "+0.50 ₾ per 50 L tank" itself (desktop; phones show only ₾/L).
+- **2026-10-06**: Octane/cetane per product, read automatically from the companies' pages each run (user asked that
+  grade changes be picked up in code). Shown in the podium, KPI cards, gap charts and tooltips; eyebrows now computed
+  from the data. Tested: grade change (warning + new value), unreadable spec page (previous kept), implausible value
+  (ignored); podium heights unchanged at 390/440/874/1440 px incl. card mode. Gulf diesel shows "cetane index 53.3"
+  (it only publishes the index); SOCAR/Lukoil diesel show the Euro 5 minimum "cetane 51+".
+- **2026-10-06**: Overlap/quality pass before committing the octane work (user request). A puppeteer sweep (15 sizes from
+  1440 to 320 px incl. 3 landscape phones × 5 fuels × pump/card) checks podium text vs price, cut product names /
+  spec / card lines, KPI overlaps, switch labels, gap-chart labels vs plot (incl. dot radius) and price labels vs edge,
+  history stats and board cells. Fixed: Gulf's "cetane index 53.3" was 4px from the plot (dynamic label column);
+  podium product line cut at 761px and 320px (spec on its own line ≤1024px, tighter 320px podium); card line cut at
+  ≤360px and phone board header "ROMPETROL"/prices overflowing at ≤390px (both pre-existing). Sweep now ALL CLEAR.
+  Regression suite also passed: podium size constant per fuel (1440/1100/900/390, pump+card), hidden-chart
+  collapse scenarios, tooltip shows spec + source, Settings default persists, old data without specs still renders.
+- **2026-10-06**: Settings bug (user report): choosing a default fuel (e.g. Premium) didn't switch the Dashboard until a
+  reload; same for "open with card prices on" and Reset. Settings now apply immediately and persist (27-check suite:
+  every option, desktop + phone, reload, reset, storage blocked). Brand link now reloads the page onto the Dashboard.
+  Fuel switch animation rebuilt (user disliked the white block's motion): spring-driven clip layer with exact text
+  inversion; measured 1.4 px settle, ~0.4 s, smooth interruption, no animation under reduced motion. Full quality
+  run (overlap sweep, regression, settings, brand link, switch glide) all passing.

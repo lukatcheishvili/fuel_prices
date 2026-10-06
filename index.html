@@ -322,15 +322,28 @@
     border: 1px solid var(--ink);
     position: relative;
   }
-  /* The white selection block is one element that slides between segments. */
+  /* The white selection block: one full-size white layer with dark copies of the labels, clipped
+     (clip-path) to the selected segment. The clip glides on the loyalty switch's spring, so the
+     block and the inverted text move together and a label is never dark-on-dark mid-slide. */
   .fuel-switch-thumb {
     position: absolute;
-    left: 0;
-    top: 0;
+    inset: 0;
     background: var(--ink);
     pointer-events: none;
-    transition: transform var(--dur-slow) var(--ease), width var(--dur-slow) var(--ease),
-                height var(--dur-slow) var(--ease);
+    z-index: 2;
+    clip-path: inset(0 100% 100% 0);  /* nothing until placed */
+  }
+  .fuel-switch-thumb .thumb-label {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--canvas);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.65px;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
   .fuel-switch button {
     appearance: none;
@@ -352,7 +365,6 @@
     transition: color var(--dur) var(--ease);
   }
   .fuel-switch button + button { border-left: 1px solid var(--hairline); }
-  .fuel-switch button[aria-checked="true"] { color: var(--canvas); }
   .fuel-switch button:focus-visible {
     outline: 2px solid var(--ink);
     outline-offset: 2px;
@@ -405,6 +417,17 @@
     gap: var(--space-xxs);
     white-space: nowrap;  /* one line, so a badge can never add height */
   }
+  .podium-product .spec { flex: none; }
+  .podium-product .sep { margin-right: var(--space-xxs); }
+  /* Narrow rows show the octane/cetane on its own line instead (see the max-width: 1024px rules). */
+  .podium-spec {
+    display: none;
+    color: var(--body-on-elevated);
+    font-size: 13px;
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+  .podium-product .product-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .badge .short { display: none; }
   /* Card line under the product: always reserves its height, so toggling never resizes rows. */
   .podium-card {
@@ -658,6 +681,18 @@
   .board-t tbody th { font-size: 13px; font-weight: 600; color: var(--ink); background: none; text-transform: none; letter-spacing: 0; }
   .board-t .price { font-size: 14px; gap: 4px; }
   .board-t .price.cheapest::before { width: 6px; height: 6px; }
+  .board-t thead th { padding-left: 1px; padding-right: 1px; }
+  .board-t .co { letter-spacing: 0; overflow-wrap: normal; }
+  @media (max-width: 400px) {
+    .board-t th:first-child, .board-t td:first-child { width: 24%; }
+  }
+  @media (max-width: 360px) {
+    .board-t th:first-child, .board-t td:first-child { width: 22%; padding-left: var(--space-xxs); }
+    .board-t td { padding-left: 1px; padding-right: 1px; }
+    .board-t .price { font-size: 12px; gap: 3px; }
+    .board-t .price.cheapest::before { width: 5px; height: 5px; }
+    .board-t .co { font-size: 7px; }
+  }
   .board-note { color: var(--body); font-size: 12px; margin: var(--space-xs) 0 0; }
   .board-key {
     color: var(--body);
@@ -791,6 +826,9 @@
 
   /* ---------- Responsive ---------- */
   @media (max-width: 1024px) {
+    /* Podium: octane/cetane on its own line, so the product name and badge always fit on theirs. */
+    .podium-product .spec { display: none; }
+    .podium-spec { display: block; }
     .chart-grid { grid-template-columns: 1fr; }
     .chart-grid .chart-card,
     .chart-grid .chart-card[data-key] { grid-column: auto; }
@@ -843,7 +881,7 @@
     .podium-row.first .podium-pos { font-size: 26px; letter-spacing: -0.5px; }
     .podium-row .logo, .podium-row.first .logo { width: 32px; height: 32px; }
     .podium-company { font-size: 16px; }
-    .podium-product, .podium-card { font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+    .podium-product, .podium-card, .podium-spec { font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
     .podium-price .value { font-size: 26px; letter-spacing: -0.3px; }
     .podium-row.first .podium-price .value { font-size: 34px; letter-spacing: -0.6px; }
     .podium-gap { margin-top: var(--space-xxxs); font-size: 11px; }
@@ -894,6 +932,25 @@
   @media (max-width: 420px) {
     .brand-text { display: none; }
   }
+  /* Small phones: the card line drops the word "Card" so "−0.15 · pump 4.94" fits beside the price. */
+  @media (max-width: 380px) {
+    .podium-card .card-word { display: none; }
+  }
+  /* The smallest phones (320px): tighter podium so product names and octane/cetane fit uncut. */
+  @media (max-width: 340px) {
+    .podium-row,
+    .podium-row.first {
+      grid-template-columns: 22px 26px minmax(0, 1fr) auto;
+      gap: var(--space-xxs);
+      padding: 0 12px;
+    }
+    .podium-row .logo, .podium-row.first .logo { width: 26px; height: 26px; }
+    .podium-pos { font-size: 20px; }
+    .podium-row.first .podium-pos { font-size: 22px; }
+    .podium-price .value { font-size: 22px; }
+    .podium-row.first .podium-price .value { font-size: 28px; }
+    .podium-product, .podium-card, .podium-spec { font-size: 11px; }
+  }
 
   /* Touch screens: every control is at least 44px tall (Apple HIG). */
   @media (pointer: coarse) {
@@ -916,6 +973,8 @@
   /* Phones held sideways (e.g. an iPhone in landscape): wide but very short, so keep
      the desktop columns but use the compact podium and tighter spacing. */
   @media (max-height: 500px) and (min-width: 761px) and (pointer: coarse) {
+    .podium-product .spec { display: inline; }  /* short rows: octane/cetane stays inline */
+    .podium-spec { display: none; }
     .hero { padding-top: var(--space-sm); }
     .hero-sub { margin: var(--space-xs) 0 var(--space-sm); }
     .section { padding-top: var(--space-lg); }
@@ -1259,19 +1318,50 @@ function bestDiesel(row) {
 }
 
 // Fuel categories in display order (diesel first: that's the owner's car).
-// Octane/cetane in the eyebrows is what the companies publish (2026-10-06, see AGENT.md > Category mapping).
+// Each eyebrow/subtitle gets the fuel's octane or cetane range from the data (specRange), so it follows
+// the companies' own figures whenever they change a grade.
 const categories = [
   { key: "bestDiesel", label: "Best diesel",  sub: "Premium tier; Lukoil has none, so its Euro Diesel is used", pick: bestDiesel,
-    heroEyebrow: "Diesel · premium grade · cetane 51+", heroTitle: "Cheapest diesel" },
+    heroEyebrow: "Diesel · premium grade",        heroTitle: "Cheapest diesel" },
   { key: "euroDiesel", label: "Euro diesel",  sub: "Plain Euro-5 diesel",              pick: r => r.euroDiesel,
-    heroEyebrow: "Diesel · Euro 5 · cetane 51+",  heroTitle: "Cheapest Euro diesel" },
-  { key: "super",      label: "Super",        sub: "Top-octane gasoline, 98 octane",   pick: r => r.super,
-    heroEyebrow: "Gasoline · 98 octane",          heroTitle: "Cheapest super" },
-  { key: "premium",    label: "Premium",      sub: "Premium gasoline, 95 octane",      pick: r => r.premium,
-    heroEyebrow: "Gasoline · 95 octane",          heroTitle: "Cheapest premium" },
-  { key: "petrol",     label: "Petrol",       sub: "Regular gasoline (Euro Regular), 92–93 octane", pick: r => r.petrol,
-    heroEyebrow: "Gasoline · 92–93 octane",       heroTitle: "Cheapest petrol" }
+    heroEyebrow: "Diesel · Euro 5",               heroTitle: "Cheapest Euro diesel" },
+  { key: "super",      label: "Super",        sub: "Top-octane gasoline",              pick: r => r.super,
+    heroEyebrow: "Gasoline",                      heroTitle: "Cheapest super" },
+  { key: "premium",    label: "Premium",      sub: "Premium gasoline",                 pick: r => r.premium,
+    heroEyebrow: "Gasoline",                      heroTitle: "Cheapest premium" },
+  { key: "petrol",     label: "Petrol",       sub: "Regular gasoline (Euro Regular)",  pick: r => r.petrol,
+    heroEyebrow: "Gasoline",                      heroTitle: "Cheapest petrol" }
 ];
+
+// ---------- Octane / cetane (spec = { type, value, min, source } from data/prices.js) ----------
+const specNum = v => String(+(+v).toFixed(1));  // 98, 51.3
+// "98 octane" · "cetane 51+" (stated as a minimum) · "cetane 51.3" · "cetane index 53.3"
+function specText(s) {
+  if (!s) return "";
+  if (s.type === "octane") return `${specNum(s.value)} octane`;
+  return `${s.type} ${specNum(s.value)}${s.min ? "+" : ""}`;
+}
+// Where the figure comes from, for tooltips.
+function specSource(s, company) {
+  if (!s) return "";
+  if (s.source === "guide") return `${company} doesn't publish its octane; figure from a third-party guide`;
+  if (s.source === "standard") return `Euro 5 minimum; ${company} doesn't publish its own figure`;
+  return `As published by ${company}`;
+}
+// The range across brands for a category: "92–93 octane" or, for diesel, "cetane 51+" (the lowest
+// cetane number any brand states or must meet; Gulf publishes a cetane index, a different scale).
+function specRange(cat) {
+  const specs = fuelData.map(r => cat.pick(r)).filter(p => p && p.spec).map(p => p.spec);
+  const oct = specs.filter(s => s.type === "octane").map(s => s.value);
+  if (oct.length) {
+    const lo = Math.min(...oct), hi = Math.max(...oct);
+    return `${specNum(lo)}${hi > lo ? "–" + specNum(hi) : ""} octane`;
+  }
+  const cet = specs.filter(s => s.type === "cetane").map(s => s.value);
+  return cet.length ? `cetane ${Math.floor(Math.min(...cet))}+` : "";
+}
+const eyebrowFor = cat => [cat.heroEyebrow, specRange(cat)].filter(Boolean).join(" · ");
+const chartSubFor = cat => (cat.key.includes("iesel") || !specRange(cat) ? cat.sub : `${cat.sub}, ${specRange(cat)}`);
 
 // Sorted [{company, name, price, gap, rank, ...}] for a category; ties share a rank.
 // withCard: rank by loyalty-card price (pump price minus entry-level discount) instead of pump price.
@@ -1308,8 +1398,8 @@ function renderPodium() {
   const rows = ranked(cat, heroWithCard).filter(r => r.rank <= 3);
 
   const eyebrow = document.getElementById("heroEyebrow");
-  if (eyebrow.textContent !== cat.heroEyebrow) {
-    eyebrow.textContent = cat.heroEyebrow;
+  if (eyebrow.textContent !== eyebrowFor(cat)) {
+    eyebrow.textContent = eyebrowFor(cat);
     if (!reducedMotion() && eyebrow.dataset.ready) {
       eyebrow.animate([{ opacity: 0 }, { opacity: 1 }], { duration: MOTION.slow, easing: MOTION.ease });
     }
@@ -1338,7 +1428,7 @@ function renderPodium() {
     const cardLine = r.card ? cardText(r) : "";
     // Phones: drop the card's name (it's in Sources) so the line fits beside the price.
     const cardHtml = !r.card ? "" : r.card.none ? "No card · pump price"
-      : `<span class="d-only">${cardLine}</span><span class="m-only">Card −${fmt(r.card.discount)} · pump ${fmt(r.pumpPrice)}</span>`;
+      : `<span class="d-only">${cardLine}</span><span class="m-only"><span class="card-word">Card </span>−${fmt(r.card.discount)} · pump ${fmt(r.pumpPrice)}</span>`;
     const stdBadge = r.standardOnly
       ? `<span class="badge" title="No premium diesel sold"><span class="long">No premium sold</span><span class="short">Std</span></span>` : "";
     return `
@@ -1347,7 +1437,8 @@ function renderPodium() {
         <img class="logo" src="${r.logo}" alt="${r.company} logo">
         <div class="podium-info">
           <div class="podium-company">${r.company}</div>
-          <div class="podium-product">${r.name}${stdBadge}</div>
+          <div class="podium-product"${r.spec ? ` title="${specText(r.spec)}: ${specSource(r.spec, r.company)}"` : ""}><span class="product-name">${r.name}</span>${r.spec ? `<span class="spec"><span class="sep">·</span>${specText(r.spec)}</span>` : ""}${stdBadge}</div>
+          <div class="podium-spec">${specText(r.spec)}</div>
           <div class="podium-card"${cardLine ? ` title="${cardLine}"` : ""}>${cardHtml}</div>
         </div>
         <div class="podium-price">
@@ -1413,7 +1504,8 @@ function renderKpis() {
   const kpiCats = categories.filter(c => c.key !== "bestDiesel");
   document.getElementById("kpiGrid").innerHTML = kpiCats.map(cat => {
     const winners = ranked(cat).filter(r => r.gap === 0);
-    const names = winners.map(w => `<strong>${w.company}</strong> ${w.name}`).join(" &middot; ");
+    const names = winners.map(w => `<strong>${w.company}</strong> ${w.name}` +
+      (w.spec ? ` <span class="spec" title="${specSource(w.spec, w.company)}">· ${specText(w.spec)}</span>` : "")).join(", ");
     const tie = winners.length > 1 ? " (tie)" : "";
     return `
       <div class="kpi-card">
@@ -1440,6 +1532,9 @@ let gapXMax = 0.16;
 let gapWithCard = settings.showCardPrices;  // gap charts' own switch (independent of the podium switch)
 const gapPanels = [];
 
+// Second line under a brand in the gap charts: its octane/cetane, plus "STD" for a standard-diesel fallback.
+const rowDetail = r => [specText(r.spec), r.standardOnly ? "STD" : ""].filter(Boolean).join(" · ");
+
 // Builds the five chart cards once; updateGapCharts() fills/refreshes them.
 function renderCharts() {
   const grid = document.getElementById("chartGrid");
@@ -1449,7 +1544,7 @@ function renderCharts() {
     card.dataset.key = cat.key;
     card.innerHTML = `
       <h3>${cat.label}</h3>
-      <p class="chart-sub">${cat.sub}</p>
+      <p class="chart-sub">${chartSubFor(cat)}</p>
       <div class="chart" role="img"></div>`;
     grid.appendChild(card);
     const chart = echarts.init(card.querySelector(".chart"));
@@ -1478,9 +1573,18 @@ function updateGapCharts() {
     elevated: token("--canvas-elevated"),
     font: token("--font")
   };
-  const measure = document.createElement("canvas").getContext("2d");
-  measure.font = `600 13px ${C.font}`;
   const slow = reducedMotion() ? 0 : MOTION.slow;
+
+  // Label column (logo + name, octane/cetane underneath) sized to its longest line across every panel,
+  // so the cheapest brand's dot (radius 7 at x = 0) never touches a label.
+  const measure = document.createElement("canvas").getContext("2d");
+  const labelEnd = r => {
+    measure.font = `600 13px ${C.font}`;
+    const name = measure.measureText(r.company).width;
+    measure.font = `400 10px ${C.font}`;
+    return 30 + Math.max(name, measure.measureText(rowDetail(r)).width);
+  };
+  const gridLeft = Math.max(118, Math.ceil(Math.max(...categories.flatMap(cat => ranked(cat).map(labelEnd)))) + 16);
 
   gapPanels.forEach(({ cat, chart }) => {
     const rows = ranked(cat, gapWithCard);
@@ -1503,7 +1607,7 @@ function updateGapCharts() {
       const xg = api.coord([r.gap, r.pos])[0];
       const rowH = api.size([0, 1])[1];
       const width = params.coordSys.x + params.coordSys.width + 64;
-      const nameW = measure.measureText(r.company).width;
+      const detail = rowDetail(r);
       const text = (name, style, extra = {}) => ({
         type: "text", name, style: { verticalAlign: "middle", ...style },
         enterFrom: { style: { opacity: 0 } }, ...extra
@@ -1521,9 +1625,10 @@ function updateGapCharts() {
           },
           { type: "image", name: "logo", style: { image: r.logo, x: 0, y: -11, width: 22, height: 22 },
             enterFrom: { style: { opacity: 0 } } },
-          text("name", { text: r.company, x: 30, y: 0, fill: C.ink, font: `600 13px ${C.font}` }),
-          text("std", { text: r.standardOnly ? "STD" : "", x: 30 + nameW + 6, y: 0, fill: C.body,
-                        font: `400 10px ${C.font}` }),
+          // Brand name, with its octane/cetane (and "STD" for a standard-diesel fallback) underneath.
+          text("name", { text: r.company, x: 30, y: detail ? -7 : 0, fill: C.ink, font: `600 13px ${C.font}` },
+               { transition: ["y"] }),
+          text("spec", { text: detail, x: 30, y: 8, fill: C.body, font: `400 10px ${C.font}` }),
           {  // stem from the cheapest price out to this brand's price
             type: "line", name: "stem",
             shape: { x1: x0, y1: 0, x2: xg, y2: 0 },
@@ -1556,7 +1661,7 @@ function updateGapCharts() {
       animationDurationUpdate: slow,
       animationEasingUpdate: "cubicOut",
       textStyle: { fontFamily: C.font },
-      grid: { left: 118, right: 64, top: 6, bottom: 28 },
+      grid: { left: gridLeft, right: 64, top: 6, bottom: 28 },
       xAxis: {
         type: "value",
         min: 0,
@@ -1590,7 +1695,8 @@ function updateGapCharts() {
             ? `<br><span style="color:${C.body}">${cardText(r)}</span>`
             : "";
           const std = r.standardOnly ? `<br><span style="color:${C.body}">No premium diesel sold, Euro Diesel shown</span>` : "";
-          return `<b>${r.company}</b> · ${r.name}<br>${fmt(r.price)} ₾/L${r.card && !r.card.none ? " with card" : ""}${card}<br><span style="color:${C.body}">${gap}</span>${std}`;
+          const spec = r.spec ? `<br><span style="color:${C.body}">${specText(r.spec)} · ${specSource(r.spec, r.company)}</span>` : "";
+          return `<b>${r.company}</b> · ${r.name}<br>${fmt(r.price)} ₾/L${r.card && !r.card.none ? " with card" : ""}${card}<br><span style="color:${C.body}">${gap}</span>${spec}${std}`;
         }
       },
       series: [{ type: "custom", clip: false, data, renderItem }]
@@ -1866,12 +1972,25 @@ function settingsChanged() {
   renderLoyalty();
 }
 
+// A changed setting also applies right away, not only on the next visit: the dashboard switches to the
+// new default fuel, and "open with my card prices on" flips both loyalty switches.
+function applyDefaultFuel(key) {
+  heroKey = key;
+  if (heroFuelControl) heroFuelControl.set(key);
+  chartSwitches.forEach(c => { c.control.set(key); c.show(key, false); });
+}
+function applyCardDefault(on) {
+  heroWithCard = gapWithCard = on;
+  ["cardToggle", "gapCardToggle"].forEach(id => document.getElementById(id).setAttribute("aria-checked", on));
+}
+
 let defaultFuelControl;
 function setupSettings() {
   renderSettings();
   defaultFuelControl = createSegmented(document.getElementById("defaultFuelSwitch"), categories,
     settings.defaultFuel, key => {
       settings.defaultFuel = key;
+      applyDefaultFuel(key);
       settingsChanged();
     });
   document.getElementById("settingsGrid").addEventListener("change", e => {
@@ -1881,12 +2000,15 @@ function setupSettings() {
   });
   bindCardSwitch(document.getElementById("defaultCardToggle"), on => {
     settings.showCardPrices = on;
+    applyCardDefault(on);
     settingsChanged();
   });
   document.getElementById("resetSettings").addEventListener("click", () => {
     settings = defaultSettings();
     renderSettings();
     defaultFuelControl.set(settings.defaultFuel);
+    applyDefaultFuel(settings.defaultFuel);
+    applyCardDefault(settings.showCardPrices);
     settingsChanged();
   });
 }
@@ -1933,16 +2055,13 @@ document.querySelectorAll(".tab-button").forEach(btn => {
   });
 });
 
-// Brand (flag + name) = home: back to the Dashboard tab, or to the top if already there.
+// Brand (flag + name) = home: reloads the page (fresh prices), which always opens on the Dashboard tab
+// at the top, with the user's saved Settings applied. Scrolling to the top first means the browser
+// restores the reloaded page at the top rather than where the user was.
 document.getElementById("brandHome").addEventListener("click", e => {
-  e.preventDefault();
-  const dashboardTab = document.querySelector('.tab-button[data-tab="dashboard"]');
-  if (dashboardTab.classList.contains("active")) {
-    window.scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" });
-  } else {
-    window.scrollTo(0, 0);
-    dashboardTab.click();
-  }
+  e.preventDefault();  // "./" would open a folder listing when the page is opened as a local file
+  window.scrollTo(0, 0);
+  location.reload();
 });
 
 // ---------- Motion (shared by every animation on the page) ----------
@@ -1987,6 +2106,33 @@ function placeIndicator(indicator, target, animate) {
   }
 }
 
+// Fuel switch selection: clips the white label layer to `target`, gliding there on GLIDE (the loyalty
+// switch's spring physics, tuned for a ~20x longer travel; see GLIDE). The dark labels inside are laid over the real buttons,
+// so text inverts exactly where the white block is on every frame. Starts from wherever a running
+// glide currently is, so quick repeated clicks stay smooth.
+function placeThumb(thumb, buttons, target, animate) {
+  const group = thumb.parentElement;
+  if (!target || !thumb.offsetParent) return;  // hidden switch: snapped again once visible
+  const g = group.getBoundingClientRect(), W = group.clientWidth, H = group.clientHeight;
+  const box = el => {
+    const r = el.getBoundingClientRect();
+    return { x: r.left - g.left - group.clientLeft, y: r.top - g.top - group.clientTop, w: r.width, h: r.height };
+  };
+  [...thumb.children].forEach((label, i) => {
+    const b = box(buttons[i]);
+    Object.assign(label.style, { left: b.x + "px", top: b.y + "px", width: b.w + "px", height: b.h + "px" });
+  });
+  const t = box(target);
+  const to = [t.y, W - t.x - t.w, H - t.y - t.h, t.x];  // inset: top right bottom left
+  const css = v => `inset(${v.map(n => Math.round(n * 100) / 100 + "px").join(" ")})`;
+  const from = (getComputedStyle(thumb).clipPath.match(/-?[\d.]+(?=px)/g) || []).map(Number);
+  thumb.getAnimations().forEach(a => a.cancel());
+  thumb.style.clipPath = css(to);
+  if (!animate || reducedMotion() || from.length !== 4 || from.every((v, i) => Math.abs(v - to[i]) < 0.5)) return;
+  thumb.animate(GLIDE.map(p => ({ clipPath: css(from.map((f, i) => Math.max(0, f + (to[i] - f) * p))) })),
+                { duration: (GLIDE.length - 1) * FRAME_MS, easing: "linear" });
+}
+
 // ---------- Loyalty switch animation ----------
 // Port of the Motion "bounce vs spring" toggle: the ball is FLIP-animated from where it was to
 // its new spot, with a spring (stiffness 700, damping 30) when switching ON and easeOutBounce
@@ -2019,6 +2165,10 @@ function bounceEase(x) {
 }
 
 const SPRING = springProgress();
+// The fuel switch's white block uses the same spring model, nearly critically damped (stiffness 400,
+// damping 34): it travels up to ~500 px, where the ball's ~11% overshoot would swing ~50 px past the
+// segment. This keeps a soft ~2-3 px settle, like the ball's.
+const GLIDE = springProgress(400, 34);
 const BOUNCE_FRAMES = Math.round(1200 / FRAME_MS);
 const BOUNCE = Array.from({ length: BOUNCE_FRAMES + 1 }, (_, i) => bounceEase(i / BOUNCE_FRAMES));
 
@@ -2055,6 +2205,7 @@ function createSegmented(group, items, initialKey, onSelect) {
   const thumb = document.createElement("span");
   thumb.className = "fuel-switch-thumb";
   thumb.setAttribute("aria-hidden", "true");
+  thumb.innerHTML = items.map(c => `<span class="thumb-label">${c.label}</span>`).join("");
   group.appendChild(thumb);  // appended last so button nth-child rules are unaffected
 
   let current = initialKey;
@@ -2062,7 +2213,7 @@ function createSegmented(group, items, initialKey, onSelect) {
     const on = b.dataset.key === current;
     b.setAttribute("aria-checked", on);
     b.tabIndex = on ? 0 : -1;
-    if (on) placeIndicator(thumb, b, animate);
+    if (on) placeThumb(thumb, buttons, b, animate);
   });
   const select = (i, focus) => {
     if (buttons[i].dataset.key === current) return;
@@ -2100,11 +2251,12 @@ function setupFuelSwitch() {
     renderPodium();
   });
 
-  createSegmented(document.getElementById("fuelSwitch"), categories, heroKey, key => {
+  heroFuelControl = createSegmented(document.getElementById("fuelSwitch"), categories, heroKey, key => {
     heroKey = key;
     renderPodium();
   });
 }
+let heroFuelControl;
 
 // Phones: a chart section shows one fuel at a time, chosen with its own switch (desktop shows all 5).
 function setupChartSwitch(switchId, gridId) {
@@ -2122,9 +2274,11 @@ function setupChartSwitch(switchId, gridId) {
     });
     window.dispatchEvent(new Event("resize"));  // the newly shown chart measures its real size
   };
-  createSegmented(group, categories, settings.defaultFuel, key => show(key, true));
+  const control = createSegmented(group, categories, settings.defaultFuel, key => show(key, true));
   show(settings.defaultFuel, false);
+  chartSwitches.push({ control, show });
 }
+const chartSwitches = [];  // phone chart switches, so a new default fuel can be applied to them too
 
 // Charts are only ever resized while visible. A chart on a hidden tab (or a phone-hidden fuel)
 // measures 0px wide; resizing it then squashed every dot and stem onto the brand labels, and

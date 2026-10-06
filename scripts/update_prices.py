@@ -3,6 +3,9 @@
 Run:  python scripts/update_prices.py      (needs openpyxl)
 Runs automatically at 08:07, 11:07, 15:07 and 18:07 Tbilisi time (.github/workflows/update-prices.yml).
 
+Each fuel also gets its octane (gasoline) or cetane (diesel) figure, read from the companies' own
+product pages on every run (see "octane / cetane per product" below).
+
 Every price is validated before anything is written:
   * it must be found on the page and be between 1 and 10 GEL (0.00 = "not sold right now"),
   * it must not move more than 25% from the last saved value (a parsing slip, not a real change).
@@ -11,6 +14,7 @@ exits with status 1 so the GitHub Action is marked failed (and GitHub emails the
 The other companies are still updated.
 """
 
+import functools
 import io
 import json
 import re
@@ -50,11 +54,12 @@ def fetch(url):
         return resp.read()
 
 
+@functools.lru_cache(maxsize=None)  # a page read for prices and again for octane/cetane is fetched once
 def page_lines(url):
-    """The page as a list of non-empty text lines (tags stripped)."""
+    """The page as a tuple of non-empty text lines (tags stripped)."""
     html = fetch(url).decode("utf-8", errors="replace")
     html = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", "\n", html)
-    return [t.strip() for t in re.sub(r"<[^>]*>", "\n", html).split("\n") if t.strip()]
+    return tuple(t.strip() for t in re.sub(r"<[^>]*>", "\n", html).split("\n") if t.strip())
 
 
 def to_price(text):
@@ -133,6 +138,134 @@ READERS = {"Wissol": read_wissol, "SOCAR": read_socar, "Gulf": read_gulf, "Lukoi
            "Rompetrol": read_rompetrol}
 
 
+# ---------------- octane / cetane per product ----------------
+# Read from each company's own pages on every run, so a grade change on their side reaches the site.
+# A spec is {"type": "octane" | "cetane" | "cetane index", "value": 98, "min": True, "source": ...}:
+# "min" = the company states it as a minimum ("Minimum 98"); source "site" = read from its pages.
+
+def spec(type_, value, minimum, source="site"):
+    return {"type": type_, "value": value, "min": minimum, "source": source}
+
+
+def specs_wissol():
+    # Each product's details popup:  <name> / "Standard Price:" ... "Octane rating: : Minimum 98"
+    # or "Cetane number: Minimum 51" (Wissol also lists a lower "Cetane index"; the number is used).
+    lines = page_lines("https://wissol.ge/en/fuel-prices")
+    found, current = {}, None
+    for i, line in enumerate(lines):
+        if i + 1 < len(lines) and lines[i + 1] == "Standard Price:":
+            current = line
+        elif current and current not in found:
+            m = re.match(r"Octane rating:\W*Minimum\s+(\d+(?:\.\d+)?)", line)
+            if m:
+                found[current] = spec("octane", float(m.group(1)), True)
+            m = re.match(r"Cetane number:\W*Minimum\s+(\d+(?:\.\d+)?)", line)
+            if m:
+                found[current] = spec("cetane", float(m.group(1)), True)
+    return found
+
+
+def specs_gulf():
+    # "FUEL CHARACTERISTICS": <name> / "Standard - Euro 5" / "Octane number (RON) - minimum 98"
+    # or "Cetane index - 53.3". Its plain diesel is called "Diesel" there, "Euro Diesel" in the price list.
+    lines = [l.replace("&nbsp;", "").strip()
+             for l in page_lines("https://gulf.ge/en/products-and-services/fuel-characteristics")]
+    aliases = {"Diesel": "Euro Diesel"}
+    found, current = {}, None
+    for i, line in enumerate(lines):
+        if i + 1 < len(lines) and lines[i + 1].startswith("Standard -"):
+            current = aliases.get(line, line)
+        elif current:
+            m = re.match(r"Octane number \(RON\) - minimum\s+(\d+(?:\.\d+)?)", line, re.I)
+            if m:
+                found[current] = spec("octane", float(m.group(1)), True)
+            m = re.match(r"Cetane index - (\d+(?:\.\d+)?)", line, re.I)
+            if m:
+                found[current] = spec("cetane index", float(m.group(1)), False)
+    return found
+
+
+def specs_lukoil():
+    # About-us page (Georgian): "... RON-98 (სუპერი), RON-95 (პრემიუმი), RON-92 (ევრო-რეგულარი) ...".
+    # Lukoil publishes no cetane figure.
+    text = " ".join(page_lines("https://www.lukoil.ge/about-us"))
+    names = {"სუპერი": "Super Ecto", "პრემიუმი": "Premium Avangard", "ევრო-რეგულარი": "Euro Regular"}
+    return {names[n]: spec("octane", float(v), False)
+            for v, n in re.findall(r"RON-(\d+)\s*\(([^)]+)\)", text) if n in names}
+
+
+def specs_rompetrol():
+    # Gasoline: the grade is in the product name on the fuels page ("efixS სუპერი 98", "efix Euro Premium 95").
+    # (The efix page also lists lab results such as 98.7; other brands only publish grades, so grades are used.)
+    # Diesel: the efix page, "Efix Euro Diesel" / "Euro Diesel" followed by "Cetane Number: 51.3".
+    found = {}
+    for line in page_lines("https://www.rompetrol.ge/en/personal/fuels"):
+        m = re.fullmatch(r"(efix\S*\s.+?)\s+(\d{2,3})", line, re.I)
+        if not m:
+            continue
+        name = m.group(1).lower()
+        product = ("efix Super" if "super" in name or "სუპერი" in name else
+                   "efix Euro Premium" if "premium" in name or "პრემიუმ" in name else
+                   "efix Euro Regular" if "regular" in name or "რეგულარ" in name else None)
+        if product:
+            found[product] = spec("octane", float(m.group(2)), False)
+    current = None
+    for line in page_lines("https://www.rompetrol.ge/en/personal/fuels/efix"):
+        if line in ("Efix Euro Diesel", "Euro Diesel"):
+            current = "efix Euro Diesel" if line.startswith("Efix") else "Euro Diesel"
+        m = re.match(r"Cetane Number:\s*(\d+(?:\.\d+)?)", line, re.I)
+        if m and current:
+            found[current] = spec("cetane", float(m.group(1)), False)
+            current = None
+    return found
+
+
+SPEC_READERS = {"Wissol": specs_wissol, "Gulf": specs_gulf, "Lukoil": specs_lukoil, "Rompetrol": specs_rompetrol}
+
+# Used only when a company doesn't publish a figure (and nothing was read before).
+# SOCAR publishes no octane on sgp.ge: these come from a third-party guide (georgiantravelguide.com/en/socar).
+SPEC_FALLBACK = {
+    "SOCAR": {"Nano Super": spec("octane", 98.0, False, "guide"),
+              "Nano Premium": spec("octane", 95.0, False, "guide"),
+              "Nano Euro Regular": spec("octane", 92.0, False, "guide")},
+}
+# Any Euro-5 diesel without a published figure: the EN 590 (Euro 5) minimum cetane number.
+DIESEL_STANDARD = spec("cetane", 51.0, True, "standard")
+SPEC_RANGE = {"octane": (80, 102), "cetane": (40, 70), "cetane index": (40, 70)}
+
+
+def attach_specs(company, data, previous):
+    """Give every category in `data` a "spec". Never fails the company's prices: if a page can't be read,
+    the previous spec is kept (then the fallback). Changes are printed as GitHub warnings."""
+    specs = {}
+    if company in SPEC_READERS:
+        try:
+            specs = SPEC_READERS[company]()
+        except Exception as e:
+            print(f"::warning::{company} octane/cetane page unreadable ({e}); kept the previous figures")
+    for cat in PRODUCTS[company]:
+        entry = data.get(cat)
+        if not entry:
+            continue
+        old_entry = previous.get(cat) or {}
+        old = old_entry.get("spec") if old_entry.get("name") == entry["name"] else None
+        new = specs.get(entry["name"])
+        if new:
+            lo, hi = SPEC_RANGE[new["type"]]
+            if not lo <= new["value"] <= hi:
+                print(f"::warning::{company} {entry['name']} {new['type']} {new['value']} looks wrong; ignored")
+                new = None
+        spec_ = (new or (old if old and old.get("source") == "site" else None)
+                 or SPEC_FALLBACK.get(company, {}).get(entry["name"])
+                 or (DIESEL_STANDARD if "iesel" in cat else None))
+        if spec_ is None:
+            print(f"::warning::{company} {entry['name']}: no octane/cetane figure found")
+            continue
+        if old and (old["type"], old["value"]) != (spec_["type"], spec_["value"]):
+            print(f"::warning::{company} {entry['name']} {old['type']} changed {old['value']} -> {spec_['value']}")
+        entry["spec"] = spec_
+
+
 # ---------------- build + validate ----------------
 
 def load_previous():
@@ -177,10 +310,12 @@ def main():
         prev = previous.get(company, {})
         try:
             data = build_company(company, reader(), prev)
+            attach_specs(company, data, prev)
             data["checkedAt"] = now.isoformat(timespec="minutes")
             companies[company] = data
-            print(f"OK   {company}: " + ", ".join(f"{k}={v['price']}" for k, v in data.items()
-                                                    if isinstance(v, dict) and "price" in v))
+            print(f"OK   {company}: " + ", ".join(
+                f"{k}={v['price']}" + (f" ({v['spec']['type']} {v['spec']['value']:g})" if "spec" in v else "")
+                for k, v in data.items() if isinstance(v, dict) and "price" in v))
         except Exception as e:  # network error, layout change, implausible value
             failures.append(f"{company}: {e}")
             if prev:
