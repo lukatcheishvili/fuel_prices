@@ -25,6 +25,7 @@ import json
 import re
 import sys
 import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -54,10 +55,27 @@ PRODUCTS = {
 EXTRAS = {"Wissol": [("Diesel Energy", "not Euro 5, aimed at machinery")]}
 
 
+FETCH_TRIES = 4  # a company's server sometimes answers 500 or stalls for a moment: try again before giving up
+FETCH_PAUSE = 8  # seconds before the 2nd try, doubled for each further one (8, 16, 32)
+
+
 def fetch(url):
+    """GET a URL. Temporary trouble (HTTP 5xx, timeout, connection error) is retried with growing pauses;
+    anything else (404, 403, ...) is raised at once."""
     req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return resp.read()
+    for attempt in range(1, FETCH_TRIES + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as e:  # checked first: HTTPError is a kind of URLError
+            err, problem, temporary = e, f"HTTP {e.code}", e.code >= 500
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            err, problem, temporary = e, str(getattr(e, "reason", e)) or type(e).__name__, True
+        if not temporary or attempt == FETCH_TRIES:
+            raise err
+        pause = FETCH_PAUSE * 2 ** (attempt - 1)
+        print(f"retry {attempt}/{FETCH_TRIES - 1}: {url} -> {problem}; waiting {pause}s")
+        time.sleep(pause)
 
 
 @functools.lru_cache(maxsize=None)  # a page read for prices and again for octane/cetane is fetched once
@@ -313,14 +331,8 @@ SOCAR_FUEL_CODES = {"PREMIUM": "Nano Premium", "EURREG": "Nano Euro Regular",
                     "DIESEL": "Euro 5 Diesel", "EURODSL": "Nano Euro 5 Diesel"}  # Nano Super isn't sold there
 
 
-def socar_json(url, tries=3):
-    for attempt in range(tries):
-        try:
-            return json.loads(fetch(url))["GetBranches"]["Results"]
-        except Exception:
-            if attempt == tries - 1:
-                raise
-            time.sleep(2)
+def socar_json(url):
+    return json.loads(fetch(url))["GetBranches"]["Results"]
 
 
 def self_socar():

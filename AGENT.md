@@ -189,6 +189,9 @@ and `scripts/build_history.py`, then commits as github-actions[bot] and pushes �
   columns); Lukoil = homepage, where the price comes BEFORE the name; Rompetrol = /en homepage table.
   Self-service prices have their own readers, see "Self-service prices".
 - History now runs through TODAY: the last day uses the live prices from data/prices.js.
+- **Retries**: `fetch()` tries a URL up to 4 times (pauses 8/16/32 s) on HTTP 5xx, timeouts and connection errors, and
+  raises at once on 4xx. Added 2026-10-08 after wissol.ge answered one run with "HTTP 500" (its server is flaky: 200, 200,
+  500 and 12 s responses in a row) and the whole run was marked failed. Retries are logged as `retry n/3: <url> -> HTTP 500`.
 - Validation: present, 1–10 GEL, ≤25% jump vs the previous file; `0.00` = not sold → `null`.
   A failing company keeps its last good data (and older checkedAt) and the run exits 1 (failed run →
   GitHub email). The page treats a null category as "not sold": unranked, "Not sold" on the board,
@@ -745,3 +748,10 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   file without the field), 338 page checks (ranking vs data, exclusivity, no layout shift, axis, notes, Sources) and
   the layout sweep extended with the self-service mode. Found on the way: the Russian label overflowed at 320px
   (labels now wrap).
+- **2026-10-08**: Manual workflow run 37804062970 failed: wissol.ge's price page answered "HTTP 500" once (its server was
+  flaky: 200, 200, 500 and 12 s responses in a row), and `update_prices.py` gave up on the first error, so the run was
+  marked failed although the other four companies (including the new self-service prices) were fine and Wissol's last good
+  prices were kept. `fetch()` now retries temporary errors (5xx, timeouts, connection errors) up to 4 times with growing
+  pauses and still fails fast on 4xx; the SOCAR helper relies on it. Tested with simulated 500/404/403/timeout/reset
+  cases (10 checks) and a full real run. Not changed: the Wissol *history* API timeout warning (known, handled), and the
+  runner image notice "ubuntu-latest moves to Ubuntu 26 on 2026-10-19" (consider pinning `ubuntu-24.04` in the workflow).
