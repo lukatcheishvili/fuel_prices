@@ -6,6 +6,8 @@ __pycache__/
 Thumbs.db
 # Airflow (airflow/): secrets and generated files stay on this machine
 .env
+.env.*
+!.env.example
 airflow/logs/*
 !airflow/logs/.gitkeep
 airflow/config/airflow.cfg
