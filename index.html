@@ -1665,7 +1665,7 @@ function renderKpis() {
     const tie = winners.length > 1 ? t("kpi.tie") : "";
     return `
       <div class="kpi-card">
-        <p class="eyebrow">${cat.heroTitle}</p>
+        <p class="eyebrow">${t("kpi.card", { title: cat.heroTitle, label: cat.label })}</p>
         <div class="kpi-main">
           <div class="kpi-price">${fmt(winners[0].price)}<span class="currency">₾</span></div>
           <div class="kpi-logos">
