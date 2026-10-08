@@ -435,11 +435,14 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   only when Georgian text is on screen). Inter covers Cyrillic.
 - Formats: prices keep the decimal point in every language (matching the companies' boards); dates are "06 Oct 2026"
   in English and "06.10.2026" in ka/ru (`formatDate`), month + year via `date.months`.
-- Length-driven choices (from the overlap sweep): ka/ru podium card line uses the compact form already at ≤1024px
-  (ru "−0.15 от 4.94", ka "4.94-დან −0.15"); ka hides the "Card" word ≤430px; ru hides the brand text in the nav
-  ≤480px; ka "No premium" badge uses its short form ≤1024px; the "Cheapest" badge has a short phone form (ru "Минимум");
+- Length-driven choices (from the overlap sweep): at ≤1024px the podium card line uses the compact form in every
+  language ("Card −0.08 · pump 4.97", ru "−0.15 от 4.94", ka "4.94-დან −0.15"; full line in the tooltip) and the
+  "No premium sold" badge its short form ("Std"); ka hides the "Card" word ≤430px; the nav shows the flag only
+  ≤480px (Russian ≤560px); the "Cheapest" badge has a short phone form (ru "Минимум");
   diesel specs are short ("ცეტანი 51+", "цетан 51+", like English "cetane 51+") so the gap charts' label column stays
-  narrow. Re-run the sweep in all three languages after any text change.
+  narrow. Re-run the sweep in all three languages after any text change, at the in-between widths (761–1280px) and
+  with the longest loyalty levels selected too: the ranking changes with each price update, so a brand with a long
+  card or product name can land in the wider P1 row (that's how the 761px cut-offs of 2026-10-08 appeared).
 
 ### Motion (user asked for smooth, professional animations)
 - Tokens: `--ease` = `cubic-bezier(0.2, 0, 0, 1)` (JS `MOTION.ease`); durations `--dur-fast` 150ms,
@@ -693,3 +696,8 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
 - **2026-10-08**: **Model routing** (user's token-saving rule): `.claude/settings.local.json` = `"model": "opusplan"`
   (Opus plans, Sonnet codes; git-ignored), rule written in "Model routing" at the top of this file, and a new
   `CLAUDE.md` imports this file so every new session loads it automatically. CLAUDE.md and .claude/ are in .vercelignore.
+- **2026-10-08**: Georgian wording revised by the user (more natural headings: "ყველაზე იაფი დიზელი დღეს", tab
+  "წყარო", "ფასების შედარება", "ცხრილი", "ფასების 5 წლიანი დინამიკა"; KPI cards show just the fuel name in Georgian via
+  `kpi.card`). Then: Georgian texts that still named the tab "წყაროები" now say „წყარო“; at 761–1024px the podium
+  card line and "No premium sold" badge use their short forms in every language (English cut off at 761px once
+  Rompetrol/Lukoil reached the P1 row). Sweep extended to 20 sizes plus a longest-loyalty-level pass.

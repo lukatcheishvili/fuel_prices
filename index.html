@@ -902,11 +902,13 @@
     /* Podium: octane/cetane on its own line, so the product name and badge always fit on theirs. */
     .podium-product .spec { display: none; }
     .podium-spec { display: block; }
-    /* Georgian words run longer: the card line switches to the compact phone form already here. */
-    .podium-card:is(:lang(ka), :lang(ru)) .d-only { display: none; }
-    .podium-card:is(:lang(ka), :lang(ru)) .m-only { display: inline; }
-    .podium-product .badge:lang(ka) .long { display: none; }
-    .podium-product .badge:lang(ka) .short { display: inline; }
+    /* Narrow desktop rows: the card line uses the compact phone form ("Card −0.08 · pump 4.97"). The full line
+       ("Rompetrol Card Classic −0.08 · pump 4.97") stays in its title tooltip. */
+    .podium-card .d-only { display: none; }
+    .podium-card .m-only { display: inline; }
+    /* Same for the "No premium sold" badge: its short form ("Std"), full wording in the tooltip. */
+    .podium-product .badge .long { display: none; }
+    .podium-product .badge .short { display: inline; }
     .chart-grid { grid-template-columns: 1fr; }
     .chart-grid .chart-card,
     .chart-grid .chart-card[data-key] { grid-column: auto; }
