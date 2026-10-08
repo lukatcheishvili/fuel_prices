@@ -1,6 +1,8 @@
 # Only the dashboard itself (index.html, assets/, data/) is published.
 # Notes, docs and build scripts stay in the repo but off the public site.
 AGENT.md
+CLAUDE.md
+.claude/
 DESIGN.md
 README.md
 scripts/

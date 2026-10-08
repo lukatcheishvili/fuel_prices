@@ -1,7 +1,7 @@
 {
   "name": "Georgia Fuel Prices",
   "short_name": "Fuel Prices",
-  "description": "Cheapest fuel in Georgia right now: Wissol, SOCAR, Gulf and Lukoil.",
+  "description": "Cheapest fuel in Georgia right now: Wissol, SOCAR, Gulf, Lukoil and Rompetrol.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

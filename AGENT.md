@@ -9,11 +9,26 @@
   in chronological order (oldest first), so the history of what was actually done is easy to scan.
 - Do not rewrite or summarize away older log entries to save space — append only.
 
+## Model routing (user's rule, 2026-10-08: save tokens)
+
+- **Plan with Opus, write code with Sonnet** (latest of each). This is configured, not just asked for:
+  `.claude/settings.local.json` sets `"model": "opusplan"`, Claude Code's built-in mode that uses Opus in plan mode
+  and switches to Sonnet automatically once the plan is approved and work starts. The file is personal (git-ignored).
+- Every new session: check the active model (shown at startup, or `/model`). If it is not "opusplan" (e.g. the
+  settings file was lost, or the session was started with `--model`), tell the user and suggest `/model opusplan`.
+- For a new task, start in plan mode (the user can press Shift+Tab, or the agent can enter plan mode) so the
+  planning happens on Opus; small, obvious one-line fixes can skip the plan.
+- **Escalate to Opus only when Sonnet isn't enough**: e.g. it fails the same fix twice, the tests in this file's
+  checklists keep failing, or the task needs deep reasoning (tricky layout/animation bugs, data-mapping decisions,
+  translations). Then either delegate that piece to a subagent with the Opus model, or ask the user to switch
+  with `/model opus` (an agent cannot change its own session model). Go back to opusplan afterwards.
+- A session cannot switch its own model mid-conversation; only the settings, `/model`, or a subagent's model can.
+
 ## Project Summary
 
 A dashboard tracking live fuel prices for Georgia's five major fuel distributors: **Wissol**,
 **SOCAR Georgia**, **Gulf Georgia**, **Lukoil Georgia**, **Rompetrol Georgia** (added 2026-10-04).
-A single static file: `index.html` (vanilla JS + CSS, Apache ECharts 6.1.0 via cdnjs, Inter via
+A single static page: `index.html` (vanilla JS + CSS, interface text in `i18n.js`: English, Georgian, Russian; Apache ECharts 6.1.0 via cdnjs, Inter via
 Google Fonts) reading `data/prices.js` and `data/history.js`, which a GitHub Action regenerates and
 commits; Apache Airflow on the user's PC (`airflow/`) starts that Action on schedule.
 No build step, no backend. Logos live in `assets/logos/`. All code lives in the git repo
@@ -400,6 +415,32 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   Top 0.23). `cardFor()` returns the user's level; "none" means pump price.
 - One segmented-control implementation (`createSegmented`) powers every fuel switch.
 
+### Languages: English (default), Georgian, Russian (added 2026-10-08)
+- All interface text lives in `i18n.js` (`window.I18N = { en, ka, ru }`, loaded before the main script). index.html reads
+  it with `t(key, vars)`: `{name}` placeholders, and a key missing in ka/ru falls back to English (used on purpose for
+  loyalty card and tier names: Energy Card, Gulf Club, Silver, Classic, PRIME...). **Never add UI text to index.html
+  directly**: add the key to all three languages. Static HTML is tagged `data-i18n` / `data-i18n-aria` /
+  `data-i18n-title`; `categories` labels are getters, so they always read the current language.
+- User's choices (2026-10-08): two pickers, always in step. (1) **Nav language button** (`#langButton`, after the
+  gear; the user's "A / 文" translate icon redrawn in the gear's line style, 20px) opening a small menu (`#langMenu`,
+  role=menu, square, `--canvas-elevated`, current language ticked; arrow keys, Escape anywhere, outside click and Tab
+  close it). (2) **Settings → "Default language"** (first block, `#languageSwitch`). Both save `settings.lang`
+  (default "en"; Reset keeps the language); labels are English / ქართული / Русский, each with its own `lang`. **Product names stay as the companies publish them** (Latin) in every language. **Georgian labels are not
+  uppercased** (no Mtavruli): the `:lang(ka)` rule near the top of the CSS turns off text-transform and tracking on every
+  uppercase label style. Russian keeps the uppercase look.
+- Switching is in place, no reload (`setLanguage`): static text, `relabel()` on every segmented control, all sections
+  re-rendered, gap charts updated, history charts disposed and rebuilt (`renderHistory` is re-runnable; phone chart
+  switches `refresh()` their selection). Charts wait for `georgianFontReady()`, because canvas text needs the font loaded.
+- Font: Inter has no Georgian letters, so `--font` is `'Inter', 'Noto Sans Georgian', ...` (Google Fonts; downloaded
+  only when Georgian text is on screen). Inter covers Cyrillic.
+- Formats: prices keep the decimal point in every language (matching the companies' boards); dates are "06 Oct 2026"
+  in English and "06.10.2026" in ka/ru (`formatDate`), month + year via `date.months`.
+- Length-driven choices (from the overlap sweep): ka/ru podium card line uses the compact form already at ≤1024px
+  (ru "−0.15 от 4.94", ka "4.94-დან −0.15"); ka hides the "Card" word ≤430px; ru hides the brand text in the nav
+  ≤480px; ka "No premium" badge uses its short form ≤1024px; the "Cheapest" badge has a short phone form (ru "Минимум");
+  diesel specs are short ("ცეტანი 51+", "цетан 51+", like English "cetane 51+") so the gap charts' label column stays
+  narrow. Re-run the sweep in all three languages after any text change.
+
 ### Motion (user asked for smooth, professional animations)
 - Tokens: `--ease` = `cubic-bezier(0.2, 0, 0, 1)` (JS `MOTION.ease`); durations `--dur-fast` 150ms,
   `--dur` 250ms, `--dur-slow` 450ms. All zeroed under `prefers-reduced-motion` (JS checks
@@ -638,3 +679,17 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   Fuel switch animation rebuilt (user disliked the white block's motion): spring-driven clip layer with exact text
   inversion; measured 1.4 px settle, ~0.4 s, smooth interruption, no animation under reduced motion. Full quality
   run (overlap sweep, regression, settings, brand link, switch glide) all passing.
+- **2026-10-08**: Added **Georgian and Russian** (English stays the default). All UI text moved to `i18n.js` (`t()`,
+  English fallback); switching re-renders in place, charts included; Noto Sans Georgian for Georgian letters; Georgian
+  labels without forced capitals; product names kept as published. A separate review agent checked every ka/ru string
+  (context, grammar, consistency): 5 errors fixed (ru help text quoting a non-existent heading, ru doubled "карта" in a
+  screen-reader legend, three ka grammar slips) plus most polish items; logo alt text now empty (name is printed next
+  to it); manifest description lists Rompetrol. Then, per the user: a **nav language button** with a small menu (their
+  translate icon, restyled), and the Settings block renamed "Default language". Tests: layout sweep (3 languages × 11
+  sizes × 5 fuels × pump/card) all clear; nav scanned 320–1440px in every language; 51 functional checks (live switch,
+  charts rebuilt and sized, tooltips translated, reload/reset/brand-link persistence, storage blocked) and 36 menu
+  checks (mouse, keyboard, Escape, sync with Settings, persistence) all pass. Found and fixed on the way: Escape didn't
+  close the menu with focus on the button; header overflow at 320/430px (brand text now hidden ≤480px, Russian ≤560px).
+- **2026-10-08**: **Model routing** (user's token-saving rule): `.claude/settings.local.json` = `"model": "opusplan"`
+  (Opus plans, Sonnet codes; git-ignored), rule written in "Model routing" at the top of this file, and a new
+  `CLAUDE.md` imports this file so every new session loads it automatically. CLAUDE.md and .claude/ are in .vercelignore.

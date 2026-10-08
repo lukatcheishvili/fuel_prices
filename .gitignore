@@ -9,3 +9,6 @@ Thumbs.db
 airflow/logs/*
 !airflow/logs/.gitkeep
 airflow/config/airflow.cfg
+
+# Claude Code: personal settings (model routing) stay on this machine
+.claude/settings.local.json
