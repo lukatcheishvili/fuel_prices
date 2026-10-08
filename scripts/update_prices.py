@@ -6,6 +6,10 @@ Runs automatically at 08:07, 11:07, 15:07 and 18:07 Tbilisi time (.github/workfl
 Each fuel also gets its octane (gasoline) or cetane (diesel) figure, read from the companies' own
 product pages on every run (see "octane / cetane per product" below).
 
+Each fuel also gets its self-service station price ("selfService": a number, or null when the company
+publishes none), read from the same pages plus SOCAR's station API (see "self-service prices" below).
+It never fails a run: if it can't be read, the previous self-service price is kept and a warning is printed.
+
 Every price is validated before anything is written:
   * it must be found on the page and be between 1 and 10 GEL (0.00 = "not sold right now"),
   * it must not move more than 25% from the last saved value (a parsing slip, not a real change).
@@ -14,11 +18,13 @@ exits with status 1 so the GitHub Action is marked failed (and GitHub emails the
 The other companies are still updated.
 """
 
+import collections
 import functools
 import io
 import json
 import re
 import sys
+import time
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -93,13 +99,19 @@ def read_socar():
     return found
 
 
-def read_gulf():
-    # Official archive download; the first data row is the current price list.
+@functools.lru_cache(maxsize=None)  # the pump prices and the Gulf+ (self-service) prices come from one download
+def gulf_latest():
+    """Every column of the first data row (the current price list), including the "(Gulf+)" ones."""
     wb = openpyxl.load_workbook(io.BytesIO(fetch("https://gulf.ge/en/fuel_prices/download")), read_only=True)
     rows = list(wb.worksheets[0].iter_rows(values_only=True))
     header, latest = list(rows[0]), rows[1]
     return {str(name).strip(): round(float(v), 2) for name, v in zip(header[1:], latest[1:])
-            if name and v not in (None, "") and "(Gulf+)" not in str(name)}
+            if name and v not in (None, "")}
+
+
+def read_gulf():
+    # Official archive download; the first data row is the current price list.
+    return {name: v for name, v in gulf_latest().items() if "(Gulf+)" not in name}
 
 
 def read_lukoil():
@@ -266,6 +278,119 @@ def attach_specs(company, data, previous):
         entry["spec"] = spec_
 
 
+# ---------------- self-service prices ----------------
+# Wissol: the same product popups as the pump price ("Self Service Price:" follows "Standard Price:").
+# Gulf: the "(Gulf+)" columns of the same download (Gulf+ is Gulf's self-service network; 0 = not sold there).
+# SOCAR: no single price list; each self-service station (brand type 3 in its station locator) has its own,
+#        so the most common price across those stations is used (one special-price station is ignored that way;
+#        on a tie, the highest of the tied prices).
+# Lukoil and Rompetrol publish no self-service price. Each reader returns {product name: price}; a product it
+# doesn't list (or lists with 0) has no self-service price.
+
+def self_wissol():
+    lines = page_lines("https://wissol.ge/en/fuel-prices")
+    found = {}
+    for i in range(len(lines) - 4):
+        if lines[i + 1] == "Standard Price:" and lines[i + 3] == "Self Service Price:":
+            price = to_price(lines[i + 4])
+            if price is not None:
+                found.setdefault(lines[i], price)
+    if not found:
+        raise ValueError('no "Self Service Price:" lines found on the page')
+    return found
+
+
+def self_gulf():
+    found = {name[:-len(" (Gulf+)")]: v for name, v in gulf_latest().items() if name.endswith(" (Gulf+)")}
+    if not found:
+        raise ValueError("no (Gulf+) columns in the download")
+    return found
+
+
+SOCAR_API = "https://sgp.ge/sgp-backend/api/integration/info/"
+SOCAR_SELF_SERVICE_BRAND = 3  # "Self service" in the station locator's brand types
+SOCAR_FUEL_CODES = {"PREMIUM": "Nano Premium", "EURREG": "Nano Euro Regular",
+                    "DIESEL": "Euro 5 Diesel", "EURODSL": "Nano Euro 5 Diesel"}  # Nano Super isn't sold there
+
+
+def socar_json(url, tries=3):
+    for attempt in range(tries):
+        try:
+            return json.loads(fetch(url))["GetBranches"]["Results"]
+        except Exception:
+            if attempt == tries - 1:
+                raise
+            time.sleep(2)
+
+
+def self_socar():
+    stations = [b["AgsId"] for b in socar_json(SOCAR_API + "get-branches-full-info")
+                if SOCAR_SELF_SERVICE_BRAND in (b.get("BrandIds") or [])]
+    if not stations:
+        raise ValueError("no self-service stations in the station list")
+    prices = collections.defaultdict(list)
+    for ags_id in stations:
+        station = socar_json(SOCAR_API + f"get-branch-full-info-by-id?agsId={ags_id}")[0]
+        for fuel in station.get("FuelsWithPrice", []):
+            try:
+                price = round(float(fuel["FuelPrice"]), 2)
+            except (KeyError, TypeError, ValueError):
+                continue
+            if fuel.get("FuelCode") in SOCAR_FUEL_CODES and 1 <= price <= 10:
+                prices[fuel["FuelCode"]].append(price)
+    found = {}
+    for code, values in prices.items():
+        counts = collections.Counter(values)
+        best = max(counts.values())
+        # the most common price; on a tie the highest of the tied prices (never promise less than a station charges)
+        found[SOCAR_FUEL_CODES[code]] = max(price for price, n in counts.items() if n == best)
+    return found
+
+
+SELF_SERVICE_READERS = {"Wissol": self_wissol, "SOCAR": self_socar, "Gulf": self_gulf}
+
+
+def attach_self_service(company, data, previous, now):
+    """Give every category in `data` a "selfService" price (number or None). Never fails the company's prices:
+    if the self-service source can't be read, or gives an implausible value, the previous value is kept."""
+    reader = SELF_SERVICE_READERS.get(company)
+    found, ok = {}, False
+    if reader:
+        try:
+            found, ok = reader(), True
+        except Exception as e:
+            print(f"::warning::{company} self-service prices unreadable ({e}); kept the previous ones")
+    for cat in PRODUCTS[company]:
+        entry = data.get(cat)
+        if not entry:
+            continue
+        old_entry = previous.get(cat) or {}
+        old = old_entry.get("selfService") if old_entry.get("name") == entry["name"] else None
+        if not reader:
+            entry["selfService"] = None  # the company publishes none
+            continue
+        new = found.get(entry["name"]) if ok else old
+        if ok and new == 0:
+            new = None  # 0 = not sold at its self-service stations
+        if ok and new is not None:
+            if not 1 <= new <= 10:
+                print(f"::warning::{company} {entry['name']} self-service price {new} is outside 1-10 GEL; "
+                      "kept the previous one")
+                new = old
+            elif old and abs(new - old) / old > MAX_JUMP:
+                print(f"::warning::{company} {entry['name']} self-service price jumped {old} -> {new}; "
+                      "kept the previous one")
+                new = old
+            elif new > entry["price"]:
+                print(f"::warning::{company} {entry['name']} self-service price {new} is above the pump price "
+                      f"{entry['price']}")
+        entry["selfService"] = new
+    if reader and ok:
+        data["selfServiceCheckedAt"] = now.isoformat(timespec="minutes")
+    elif previous.get("selfServiceCheckedAt"):
+        data["selfServiceCheckedAt"] = previous["selfServiceCheckedAt"]
+
+
 # ---------------- build + validate ----------------
 
 def load_previous():
@@ -311,10 +436,12 @@ def main():
         try:
             data = build_company(company, reader(), prev)
             attach_specs(company, data, prev)
+            attach_self_service(company, data, prev, now)
             data["checkedAt"] = now.isoformat(timespec="minutes")
             companies[company] = data
             print(f"OK   {company}: " + ", ".join(
                 f"{k}={v['price']}" + (f" ({v['spec']['type']} {v['spec']['value']:g})" if "spec" in v else "")
+                + (f" self-service {v['selfService']}" if v.get("selfService") else "")
                 for k, v in data.items() if isinstance(v, dict) and "price" in v))
         except Exception as e:  # network error, layout change, implausible value
             failures.append(f"{company}: {e}")

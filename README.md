@@ -35,7 +35,7 @@ index.html                    the dashboard
 assets/                       favicon, flag, company logos
 data/prices.js                current prices (updated four times a day)
 data/history.js               5-year daily price history (generated)
-scripts/update_prices.py      reads the five official price pages -> data/prices.js
+scripts/update_prices.py      reads the five official price pages (pump and self-service prices) -> data/prices.js
 scripts/build_history.py      rebuilds data/history.js from the companies' official archives
 .github/workflows/update-prices.yml   runs both scripts and commits the new data
 airflow/                   Apache Airflow (Docker) that starts the workflow on schedule
@@ -53,6 +53,10 @@ None of the companies publishes a public API, so current prices are read from ea
 price page. The history comes from their official archives (SOCAR and Wissol APIs, Gulf's Excel
 download, Lukoil's history table). Rompetrol publishes no archive, so its history is collected by
 this project from 04 Oct 2026 onward.
+
+A "Self-service prices" switch shows the price at self-service stations, for the companies that publish one
+(Wissol, Gulf+ and SOCAR; Lukoil and Rompetrol publish none). It has no history, and it never shows a card
+discount on top of it: see the Sources tab for what each company says about cards at self-service stations.
 
 **Automatic updates:** a GitHub Action (`.github/workflows/update-prices.yml`) reads the five price
 pages, refreshes the history, and commits the new data; the push redeploys the site on Vercel. It is

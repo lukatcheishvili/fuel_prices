@@ -152,8 +152,8 @@ None of the four companies use the same product names, so categories were mapped
   so the diesel eyebrows show "cetane 51+" (EN 590 / Euro-5 minimum; Wissol lists cetane number ≥51, Gulf cetane
   index 53.3). The diesel eyebrow used to say "best grade per brand"; the Lukoil fallback is still flagged by the
   "No premium sold" badge.
-- Prices used are the **standard (full-service) pump price**. Wissol also lists a lower
-  self-service price on its page, which is ignored.
+- Prices used are the **standard (full-service) pump price**. Self-service station prices are a separate,
+  optional mode (see "Self-service prices" below).
 
 ### No public APIs exist
 
@@ -187,6 +187,7 @@ and `scripts/build_history.py`, then commits as github-actions[bot] and pushes �
 - Readers: Wissol = "<name> / Standard Price: / 4.58 ₾" on /en/fuel-prices; SOCAR = "<name> /
   Standard / 4.55" on the homepage; Gulf = first data row of the .xlsx download (skip "(Gulf+)"
   columns); Lukoil = homepage, where the price comes BEFORE the name; Rompetrol = /en homepage table.
+  Self-service prices have their own readers, see "Self-service prices".
 - History now runs through TODAY: the last day uses the live prices from data/prices.js.
 - Validation: present, 1–10 GEL, ≤25% jump vs the previous file; `0.00` = not sold → `null`.
   A failing company keeps its last good data (and older checkedAt) and the run exits 1 (failed run →
@@ -234,7 +235,8 @@ below), so always re-verify on the official page before changing these.
   (app QR 0.20/0.25) from gulf.ge promo #280. That promo page is now 404 and SOCAR's own FAQ
   says 0.15/0.20/0.25, so the official pages win.
 - Gulf's "Gulf+" price columns (≈0.10 lower) are Gulf's self-service network (gulfplus.ge), NOT a
-  loyalty discount. Wissol's lower "self-service" price is likewise not a card discount.
+  loyalty discount. Wissol's lower "self-service" price is likewise not a card discount. They feed the separate
+  "Self-service prices" mode, never the card mode.
 - Wissol's page doesn't say whether the discount differs by fuel type; it's assumed to apply to all fuels.
 
 ### Rompetrol Georgia (5th company, added 2026-10-04 at the user's request)
@@ -394,6 +396,39 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   compact podium (rows 92/76px) and tighter spacing; podium 376px → 244px.
 - Verified at 402×874 and 440×956 portrait plus 874×402 and 956×440 landscape (DPR 3, iOS UA): no overflow, no small tap
   targets, no console errors.
+
+### Self-service prices (added 2026-10-08; switch beside "Loyalty card prices")
+- **Data** (`scripts/update_prices.py`, `attach_self_service`): every category gets `selfService` (number or `null`)
+  next to `price`, plus `selfServiceCheckedAt` per company. Sources, checked 2026-10-08 on the companies' own pages:
+  - **Wissol**: same price page, `<name> / Standard Price: / x / Self Service Price: / y` (not for A1 Super 100, Gas).
+  - **Gulf**: the "(Gulf+)" columns of the same xlsx (Gulf+ = Gulf's self-service network; 0 = not sold there; the
+    columns only have data since 2026-10-02).
+  - **SOCAR**: no price list; per-station prices from its station-locator API: `get-branches-full-info`
+    (stations whose `BrandIds` contain 3 = "Self service", 10 today) then `get-branch-full-info-by-id?agsId=N`
+    (`FuelsWithPrice`, prices are strings). The **most common price** across those stations is used (on a tie the
+    highest); one station (Vakhushti) has much lower "special" prices and is outvoted. Nano Super isn't sold there.
+  - **Lukoil, Rompetrol**: publish none (`selfService: null`).
+- **Failure isolation**: a self-service reader never fails a run or touches pump prices. On error the previous value
+  is kept with a `::warning::` (and the older `selfServiceCheckedAt`); 0 → null; outside 1–10 GEL or a >25% jump
+  keeps the previous value; a self-service price above the pump price only warns. `build_history.py` ignores it
+  (history is pump prices only; Gulf+ has no archive before 2026-10-02).
+- **UI**: `ranked(cat, mode)` modes `"pump" | "card" | "self"` (true/false still mean card/pump). A brand or product
+  with no self-service price is **left out** of the ranking like a fuel not on sale (user's choice), never replaced by
+  its pump price. Hero (`#selfToggle`, `heroSelf`) and gap charts (`#gapSelfToggle`, `gapSelf`) have their own
+  switches, both built with `bindCardSwitch`. KPI cards, price board and 5-year history stay on pump prices.
+- **Exclusive with card prices** (user asked to decide from the facts): turning one on turns the other off in the
+  same section (`setSwitch` animates the ball), and Settings' "open with card prices on" clears self-service.
+  Reason: stacking is confirmed for Wissol only ("additional" 15–25 tetri); SOCAR Prime's 0.30 explicitly does not
+  apply at self-service and its Energy Card level discount isn't stated; Gulf Club works at Gulf+ but QR discount
+  rates there can differ (promo wording, unverified). The Sources tab ("Where self-service prices come from")
+  records these per-company facts with links. Re-check them before ever allowing both.
+- **Layout**: the two switches sit in `.switch-row` (side by side on wide screens, stacked ≤760px; the hero meta
+  line stacks above them ≤1024px; long labels wrap). The podium row shows "Self-service −0.26 · pump 4.94" in the
+  reserved `.podium-card` line (compact "pump-from" form ≤1024px). `.mode-note` lines under the podium and under the gap
+  grid ("No self-service price: Lukoil, Rompetrol") have reserved height that is taken back with a negative bottom
+  margin, so toggling never moves the page (tested at 6 widths × 5 fuels × 3 languages). The gap x-scale is
+  computed over pump, card and self-service so the axis never jumps. If no brand has a price for a fuel the podium
+  shows one "empty" row.
 
 ### Settings tab (saved per browser in localStorage key `gfp.settings.v1`)
 - The tab is an **icon-only gear** (18px) after Sources on every screen size. The user asked
@@ -701,3 +736,12 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   `kpi.card`). Then: Georgian texts that still named the tab "წყაროები" now say „წყარო“; at 761–1024px the podium
   card line and "No premium sold" badge use their short forms in every language (English cut off at 761px once
   Rompetrol/Lukoil reached the P1 row). Sweep extended to 20 sizes plus a longest-loyalty-level pass.
+- **2026-10-08**: **Self-service prices** switch (user request), after a plan with Opus: research on the companies' own
+  pages first (Wissol, Gulf+ and SOCAR publish one; SOCAR only per station; Lukoil and Rompetrol none) and on whether
+  card discounts apply at self-service stations (Wissol yes/stacks; SOCAR Prime no, Energy level unstated; Gulf yes but
+  rates may differ), which led to the exclusive-switch rule. Added the readers, the `selfService` field, the two
+  switches (hero + gap charts), reserved note lines, a Sources section with the card facts, and ka/ru/en text
+  (ka/ru reviewed by a separate agent). Tests: reader unit tests (failure keeps previous, 0, jump, range, tie, old
+  file without the field), 338 page checks (ranking vs data, exclusivity, no layout shift, axis, notes, Sources) and
+  the layout sweep extended with the self-service mode. Found on the way: the Russian label overflowed at 320px
+  (labels now wrap).

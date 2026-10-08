@@ -338,6 +338,28 @@
     font-size: 13px;
     margin: 0;
   }
+  /* The two price switches (loyalty card, self-service) sit side by side. */
+  .switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: var(--space-xs) var(--space-md);
+  }
+  /* A long label (e.g. Russian) wraps instead of pushing the page wider on the smallest phones. */
+  .switch-row .card-switch { flex: 0 1 auto; min-width: 0; max-width: 100%; white-space: normal; text-align: left; }
+  /* One line (two on narrower screens) saying which brands have no self-service price. Its height is always
+     reserved and then taken back from the space below (negative bottom margin), so switching the mode on or
+     off never moves anything on the page. */
+  :root { --note-h: 18px; --note-gap: 16px; }
+  .mode-note {
+    color: var(--body);
+    font-size: 12px;
+    line-height: 18px;
+    height: var(--note-h);
+    margin: var(--note-gap) 0 calc(-1 * (var(--note-gap) + var(--note-h)));
+    overflow: hidden;
+  }
   /* Loyalty card switch: pill track + ball (user-supplied Motion design; the one deliberate
      exception to the 0px-corner rule). The ball springs on and bounces off (see animateBall). */
   .card-switch {
@@ -464,6 +486,8 @@
   }
   .podium-row.moving { z-index: 2; }
   .podium-row.ghost { position: absolute; left: 0; right: 0; z-index: 0; pointer-events: none; }
+  /* No brand has a self-service price for this fuel: one row of the usual height says so. */
+  .podium-row.empty { grid-template-columns: 1fr; color: var(--body-on-elevated); font-size: 14px; }
   .podium-row:first-child { border-top: none; }
   .podium-pos {
     font-size: 40px;
@@ -909,6 +933,9 @@
     /* Same for the "No premium sold" badge: its short form ("Std"), full wording in the tooltip. */
     .podium-product .badge .long { display: none; }
     .podium-product .badge .short { display: inline; }
+    :root { --note-h: 36px; }
+    .hero-sub { flex-direction: column; align-items: flex-start; gap: var(--space-xs); }
+    .switch-row { justify-content: flex-start; }
     .chart-grid { grid-template-columns: 1fr; }
     .chart-grid .chart-card,
     .chart-grid .chart-card[data-key] { grid-column: auto; }
@@ -934,7 +961,9 @@
     /* Hero */
     .hero { padding-top: var(--space-md); }
     .hero-title { font-size: 28px; }
-    .hero-sub { flex-direction: column; align-items: flex-start; gap: var(--space-xs); margin: var(--space-xs) 0 var(--space-sm); }
+    .hero-sub { margin: var(--space-xs) 0 var(--space-sm); }
+    .switch-row { flex-direction: column; align-items: flex-start; gap: var(--space-xxs); }
+    :root { --note-gap: 8px; }
 
     /* Fuel switches: full width on two rows (the two diesels, then the three gasolines);
        phone-only switches sit above the chart sections */
@@ -1129,13 +1158,21 @@
       </div>
       <div class="hero-sub">
         <p class="hero-meta" id="heroMeta"></p>
-        <button type="button" class="card-switch" id="cardToggle" role="switch" aria-checked="false"
-                title="Show prices with your loyalty card discount at each company (set your levels in Settings)" data-i18n-title="card.switchTitle">
-          <span data-i18n="card.switch">Loyalty card prices</span>
-          <span class="track" aria-hidden="true"><span class="ball"></span></span>
-        </button>
+        <div class="switch-row">
+          <button type="button" class="card-switch" id="cardToggle" role="switch" aria-checked="false"
+                  title="Show prices with your loyalty card discount at each company (set your levels in Settings)" data-i18n-title="card.switchTitle">
+            <span data-i18n="card.switch">Loyalty card prices</span>
+            <span class="track" aria-hidden="true"><span class="ball"></span></span>
+          </button>
+          <button type="button" class="card-switch" id="selfToggle" role="switch" aria-checked="false"
+                  title="Show the prices at self-service stations (not published by every company or for every fuel)" data-i18n-title="self.switchTitle">
+            <span data-i18n="self.switch">Self-service prices</span>
+            <span class="track" aria-hidden="true"><span class="ball"></span></span>
+          </button>
+        </div>
       </div>
       <div class="podium" id="podium"></div>
+      <p class="mode-note" id="heroNote" role="status" aria-live="polite"></p>
     </section>
 
     <section class="section" aria-labelledby="kpiTitle">
@@ -1155,11 +1192,18 @@
             share one scale, so equal gaps look equal.</p>
         </div>
         <div class="section-tools">
-          <button type="button" class="card-switch" id="gapCardToggle" role="switch" aria-checked="false"
-                  title="Show the charts with your loyalty card discount at each company (set your levels in Settings)" data-i18n-title="gap.switchTitle">
-            <span data-i18n="card.switch">Loyalty card prices</span>
-            <span class="track" aria-hidden="true"><span class="ball"></span></span>
-          </button>
+          <div class="switch-row">
+            <button type="button" class="card-switch" id="gapCardToggle" role="switch" aria-checked="false"
+                    title="Show the charts with your loyalty card discount at each company (set your levels in Settings)" data-i18n-title="gap.switchTitle">
+              <span data-i18n="card.switch">Loyalty card prices</span>
+              <span class="track" aria-hidden="true"><span class="ball"></span></span>
+            </button>
+            <button type="button" class="card-switch" id="gapSelfToggle" role="switch" aria-checked="false"
+                    title="Show the charts with self-service station prices (not published by every company or for every fuel)" data-i18n-title="gap.selfSwitchTitle">
+              <span data-i18n="self.switch">Self-service prices</span>
+              <span class="track" aria-hidden="true"><span class="ball"></span></span>
+            </button>
+          </div>
           <div class="legend" aria-hidden="true">
             <span><i style="background: var(--primary)"></i><span data-i18n="legend.cheapest">Cheapest</span></span>
             <span><i style="background: var(--body)"></i><span data-i18n="legend.others">Everyone else</span></span>
@@ -1168,6 +1212,7 @@
       </div>
       <div class="fuel-switch mobile-switch" id="gapSwitch" role="radiogroup" aria-label="Fuel for these charts" data-i18n-aria="charts.fuelAria"></div>
       <div class="chart-grid" id="chartGrid"></div>
+      <p class="mode-note" id="gapNote" role="status" aria-live="polite"></p>
     </section>
 
     <section class="section" aria-labelledby="boardTitle">
@@ -1222,6 +1267,23 @@
         <table class="board stack" id="sourcesTable">
           <thead>
             <tr><th data-i18n="board.company">Company</th><th data-i18n="sources.current">Current prices</th><th data-i18n="sources.history">Price history</th><th data-i18n="sources.checked">Last checked</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow" data-i18n="selfsrc.eyebrow">Self-service stations</p>
+          <h2 class="section-title" data-i18n="selfsrc.title">Where self-service prices come from</h2>
+          <p class="section-sub" data-i18n="selfsrc.sub">With "Self-service prices" switched on, the dashboard shows the price at each company's self-service stations. Only some companies publish one, and not for every fuel. Card discounts at self-service stations are not published consistently, so this mode shows the published self-service price without any card discount, and it cannot be combined with "Loyalty card prices".</p>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="board stack" id="selfSourceTable">
+          <thead>
+            <tr><th data-i18n="board.company">Company</th><th data-i18n="selfsrc.colPrice">Self-service price</th><th data-i18n="selfsrc.colCard">Loyalty card at self-service stations</th><th data-i18n="loyalty.source">Source</th><th data-i18n="sources.checked">Last checked</th></tr>
           </thead>
           <tbody></tbody>
         </table>
@@ -1444,6 +1506,8 @@ const cardFor = company => {
   return { ...c, none: false, level, discount: levelDiscount(level) };
 };
 // "Energy Card 150+ L −0.25 · pump 4.94" / "No card · pump price"
+// Self-service line under a podium row: "Self-service −0.10 · pump 4.64" (compact on narrow screens).
+const selfText = r => t("self.line", { diff: fmt(r.selfDiff), pump: fmt(r.pumpPrice) });
 const cardText = r => (r.card.none
   ? t("card.none")
   : t("card.line", {
@@ -1520,20 +1584,31 @@ const eyebrowFor = cat => [cat.heroEyebrow, specRange(cat)].filter(Boolean).join
 const chartSubFor = cat => (cat.key.includes("iesel") || !specRange(cat) ? cat.sub : `${cat.sub}, ${specRange(cat)}`);
 
 // Sorted [{company, name, price, gap, rank, ...}] for a category; ties share a rank.
-// withCard: rank by loyalty-card price (pump price minus entry-level discount) instead of pump price.
-function ranked(cat, withCard = false) {
+// mode "pump" (default): the pump price. "card": loyalty-card price (pump price minus the user's card discount).
+// "self": the self-service station price; a brand with none for this fuel isn't ranked (like a fuel not on sale).
+// (true/false still work: card / pump.)
+function ranked(cat, mode = "pump") {
+  if (mode === true) mode = "card";
+  if (mode === false) mode = "pump";
   const rows = fuelData
     .filter(r => cat.pick(r))  // a brand that isn't selling this fuel right now isn't ranked
+    .filter(r => mode !== "self" || cat.pick(r).selfService != null)
     .map(r => {
       const row = { company: r.company, logo: r.logo, ...cat.pick(r) };
-      if (withCard) {
+      if (mode === "card") {
         row.card = cardFor(r.company);
         row.pumpPrice = row.price;
         row.price = Math.round((row.price - row.card.discount) * 100) / 100;
+      } else if (mode === "self") {
+        row.self = true;
+        row.pumpPrice = row.price;
+        row.price = row.selfService;
+        row.selfDiff = Math.round((row.pumpPrice - row.price) * 100) / 100;
       }
       return row;
     })
     .sort((a, b) => a.price - b.price);
+  if (!rows.length) return rows;  // e.g. self-service mode before any self-service price has been read
   const min = rows[0].price;
   rows.forEach((r, i) => {
     r.gap = Math.round((r.price - min) * 100) / 100;
@@ -1546,12 +1621,17 @@ function ranked(cat, withCard = false) {
 // Opens on the user's default fuel (Settings; Best diesel unless changed).
 let heroKey = settings.defaultFuel;
 let heroWithCard = settings.showCardPrices;  // off unless the user chose "open with my card prices on"
+let heroSelf = false;  // self-service prices: never together with the card prices (card discounts at self-service
+                       // stations aren't published consistently, see the Sources tab)
+const heroMode = () => (heroSelf ? "self" : heroWithCard ? "card" : "pump");
+// Brands that sell `cat` but publish no self-service price for it, for the note under the podium / charts.
+const noSelfNote = names => (names.length ? t("self.note", { list: names.join(", ") }) : "");
 
 function renderPodium() {
   const cat = categories.find(c => c.key === heroKey);
   // Top 3, plus any brand tied on price with the 3rd (so nobody is dropped arbitrarily).
   // Positions are simply numbered down the list (P1, P2, P3, P4): equal prices don't share one.
-  const rows = ranked(cat, heroWithCard).filter(r => r.rank <= 3);
+  const rows = ranked(cat, heroMode()).filter(r => r.rank <= 3);
 
   const eyebrow = document.getElementById("heroEyebrow");
   if (eyebrow.textContent !== eyebrowFor(cat)) {
@@ -1563,8 +1643,10 @@ function renderPodium() {
   }
   document.querySelectorAll("#heroTitle > span").forEach(s =>
     s.classList.toggle("current", s.dataset.key === heroKey));
-  const toggle = document.getElementById("cardToggle");
-  toggle.setAttribute("aria-checked", heroWithCard);
+  document.getElementById("cardToggle").setAttribute("aria-checked", heroWithCard);
+  document.getElementById("selfToggle").setAttribute("aria-checked", heroSelf);
+  document.getElementById("heroNote").textContent = heroSelf
+    ? noSelfNote(fuelData.filter(r => cat.pick(r) && cat.pick(r).selfService == null).map(r => r.company)) : "";
   document.getElementById("heroMeta").textContent =
     t("hero.meta", { date: formatDate(lastUpdated), time: lastUpdatedTime });
 
@@ -1577,14 +1659,16 @@ function renderPodium() {
     detail: el.querySelector(".podium-product").innerHTML + el.querySelector(".podium-card").innerHTML
   }));
 
-  podium.innerHTML = rows.map((r, i) => {
+  podium.innerHTML = !rows.length ? `<div class="podium-row empty">${t("self.noneForFuel")}</div>` : rows.map((r, i) => {
     const gapLine = r.gap === 0
       ? `<div class="podium-gap"><span class="badge solid"><span class="long">${t("podium.cheapest")}</span><span class="short">${t("podium.cheapestShort")}</span></span></div>`
       : `<div class="podium-gap">${t("podium.gap", { gap: fmt(r.gap) })}<span class="d-only">${
           t("podium.tank", { tank: fmt(r.gap * TANK_LITERS), liters: TANK_LITERS })}</span></div>`;
-    const cardLine = r.card ? cardText(r) : "";
+    const cardLine = r.card ? cardText(r) : r.self ? selfText(r) : "";
     // Phones: drop the card's name (it's in Sources) so the line fits beside the price.
-    const cardHtml = !r.card ? "" : r.card.none ? t("card.none")
+    const cardHtml = r.self ? `<span class="d-only">${cardLine}</span><span class="m-only">${
+          t("self.short", { diff: fmt(r.selfDiff), pump: fmt(r.pumpPrice) })}</span>`
+      : !r.card ? "" : r.card.none ? t("card.none")
       : `<span class="d-only">${cardLine}</span><span class="m-only"><span class="card-word">${t("card.word")} </span>${
           t("card.short", { discount: fmt(r.card.discount), pump: fmt(r.pumpPrice) })}</span>`;
     const stdBadge = r.standardOnly
@@ -1688,6 +1772,8 @@ const tickInterval = (el, max) => (el.clientWidth < 420 ? max / 2 : el.clientWid
 let gapXMax = 0.16;
 
 let gapWithCard = settings.showCardPrices;  // gap charts' own switch (independent of the podium switch)
+let gapSelf = false;  // the charts' own self-service switch (exclusive with gapWithCard)
+const gapMode = () => (gapSelf ? "self" : gapWithCard ? "card" : "pump");
 const gapPanels = [];
 
 // Second line under a brand in the gap charts: its octane/cetane, plus "STD" for a standard-diesel fallback.
@@ -1713,6 +1799,11 @@ function renderCharts() {
 }
 
 function updateGapCharts() {
+  document.getElementById("gapCardToggle").setAttribute("aria-checked", gapWithCard);
+  document.getElementById("gapSelfToggle").setAttribute("aria-checked", gapSelf);
+  // Brands with no self-service price in any fuel (the others just lack it for some fuels: no row there).
+  document.getElementById("gapNote").textContent = gapSelf
+    ? noSelfNote(fuelData.filter(r => !categories.some(c => c.pick(r) && c.pick(r).selfService != null)).map(r => r.company)) : "";
   gapPanels.forEach(({ cat, card }) => {  // titles in the current language
     card.querySelector("h3").textContent = cat.label;
     card.querySelector(".chart-sub").textContent = chartSubFor(cat);
@@ -1720,7 +1811,7 @@ function updateGapCharts() {
   // One shared x-scale across every panel AND both price modes, so the same gap reads the same
   // everywhere and switching loyalty prices moves the dots, never the axis.
   const maxGap = Math.max(...categories.flatMap(cat =>
-    [...ranked(cat), ...ranked(cat, true)].map(r => r.gap)));
+    [...ranked(cat), ...ranked(cat, "card"), ...ranked(cat, "self")].map(r => r.gap)));
   // Rounded to 0.04 so both tick spacings (0.02 wide, 0.04 narrow) land on the max.
   const xMax = Math.max(0.08, Math.ceil((maxGap + 0.005) / 0.04) * 0.04);
   gapXMax = xMax;
@@ -1749,10 +1840,10 @@ function updateGapCharts() {
   const gridLeft = Math.max(118, Math.ceil(Math.max(...categories.flatMap(cat => ranked(cat).map(labelEnd)))) + 16);
 
   gapPanels.forEach(({ cat, chart }) => {
-    const rows = ranked(cat, gapWithCard);
+    const rows = ranked(cat, gapMode());
     const byCompany = new Map(rows.map((r, i) => [r.company, { ...r, pos: i }]));
     chart.getDom().setAttribute("aria-label", t("gap.aria", {
-      label: cat.label, withCard: gapWithCard ? t("gap.ariaWithCard") : "",
+      label: cat.label, withCard: gapSelf ? t("gap.ariaSelf") : gapWithCard ? t("gap.ariaWithCard") : "",
       list: rows.map(r => t("gap.ariaItem", { company: r.company, price: fmt(r.price) })).join(", ") }));
 
     // Data stays in fixed company order, so each brand keeps its data index across updates and
@@ -1856,11 +1947,11 @@ function updateGapCharts() {
             : t("gap.tipGap", { gap: fmt(r.gap), tank: fmt(r.gap * TANK_LITERS), liters: TANK_LITERS });
           const card = r.card
             ? `<br><span style="color:${C.body}">${cardText(r)}</span>`
-            : "";
+            : r.self ? `<br><span style="color:${C.body}">${selfText(r)}</span>` : "";
           const std = r.standardOnly ? `<br><span style="color:${C.body}">${t("gap.tipStd")}</span>` : "";
           const spec = r.spec ? `<br><span style="color:${C.body}">${specText(r.spec)} · ${specSource(r.spec, r.company)}</span>` : "";
           return `<b>${r.company}</b> · ${r.name}<br>${t("gap.tipPrice", { price: fmt(r.price) })}${
-            r.card && !r.card.none ? t("gap.tipWithCard") : ""}${card}<br><span style="color:${C.body}">${gap}</span>${spec}${std}`;
+            r.card && !r.card.none ? t("gap.tipWithCard") : r.self ? t("gap.tipSelf") : ""}${card}<br><span style="color:${C.body}">${gap}</span>${spec}${std}`;
         }
       },
       series: [{ type: "custom", clip: false, data, renderItem }]
@@ -2023,7 +2114,7 @@ function renderHistory() {
 
   document.getElementById("historyNote").textContent = t("history.note", {
     start: formatDate(window.fuelHistory.start), end: formatDate(lastUpdated), lukoilStart: formatDate("2022-07-15"),
-    rompetrolStart: formatDate(ROMPETROL_SINCE), rompetrolPremium: formatDate("2026-10-06") });
+    rompetrolStart: formatDate(ROMPETROL_SINCE), rompetrolPremium: formatDate("2026-10-06") }) + " " + t("history.noteSelf");
 }
 
 // ---------- Price board ----------
@@ -2068,6 +2159,7 @@ function renderBoard() {
 
 // ---------- Sources ----------
 function renderSources() {
+  renderSelfSources();
   document.querySelector("#sourcesTable tbody").innerHTML = sources.map(s => `
     <tr>
       <td><div class="company-cell"><img class="logo" src="${logoOf(s.company)}" alt="">${s.company}</div></td>
@@ -2077,6 +2169,28 @@ function renderSources() {
         : `<span class="none">${t("sources.noArchive", { date: formatDate(ROMPETROL_SINCE) })}</span>`}</td>
       <td data-label="${t("sources.checked")}">${formatDate(s.checked)}</td>
     </tr>`).join("");
+}
+
+// Self-service prices: where each company's comes from, and what its own pages say about loyalty cards there.
+const selfSources = [
+  { company: "Wissol", urls: ["https://wissol.ge/en/retail/self-service"] },
+  { company: "SOCAR", urls: ["https://sgp.ge/en/self-service", "https://sgp.ge/en/news/Socar-Prime-akhali-gamoweris-funkcia"] },
+  { company: "Gulf", urls: ["https://gulf.ge/en/gulf_club"] },
+  { company: "Lukoil", urls: ["https://www.lukoil.ge/"] },
+  { company: "Rompetrol", urls: ["https://www.rompetrol.ge/en"] }
+];
+function renderSelfSources() {
+  document.querySelector("#selfSourceTable tbody").innerHTML = selfSources.map(s => {
+    const checked = (priceFeed.companies[s.company] || {}).selfServiceCheckedAt;
+    return `
+    <tr>
+      <td><div class="company-cell"><img class="logo" src="${logoOf(s.company)}" alt="">${s.company}</div></td>
+      <td data-label="${t("selfsrc.colPrice")}">${t(`selfsrc.${s.company}.price`)}</td>
+      <td data-label="${t("selfsrc.colCard")}">${t(`selfsrc.${s.company}.card`)}</td>
+      <td data-label="${t("loyalty.source")}">${s.urls.map(u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`).join("<br>")}</td>
+      <td data-label="${t("sources.checked")}">${checked ? formatDate(checked.slice(0, 10)) : "—"}</td>
+    </tr>`;
+  }).join("");
 }
 
 function renderLoyalty() {
@@ -2143,6 +2257,10 @@ function applyDefaultFuel(key) {
 function applyCardDefault(on) {
   heroWithCard = gapWithCard = on;
   ["cardToggle", "gapCardToggle"].forEach(id => document.getElementById(id).setAttribute("aria-checked", on));
+  if (on) {  // card prices and self-service prices are never on together
+    heroSelf = gapSelf = false;
+    ["selfToggle", "gapSelfToggle"].forEach(id => document.getElementById(id).setAttribute("aria-checked", false));
+  }
 }
 
 // Switches the whole page to another language in place (no reload): static text, every rendered
@@ -2420,6 +2538,14 @@ function bindCardSwitch(button, onChange) {
   });
 }
 
+// Flips a switch from code (the other price switch was turned on), moving its ball like a click would.
+function setSwitch(button, on) {
+  const ball = button.querySelector(".ball");
+  const from = ball.getBoundingClientRect().left;
+  button.setAttribute("aria-checked", on);
+  animateBall(ball, from - ball.getBoundingClientRect().left, on);
+}
+
 function animateBall(ball, dx, on) {
   ball.getAnimations().forEach(a => a.cancel());
   if (!dx || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -2494,6 +2620,12 @@ function setupFuelSwitch() {
 
   bindCardSwitch(document.getElementById("cardToggle"), on => {
     heroWithCard = on;
+    if (on && heroSelf) { heroSelf = false; setSwitch(document.getElementById("selfToggle"), false); }
+    renderPodium();
+  });
+  bindCardSwitch(document.getElementById("selfToggle"), on => {
+    heroSelf = on;
+    if (on && heroWithCard) { heroWithCard = false; setSwitch(document.getElementById("cardToggle"), false); }
     renderPodium();
   });
 
@@ -2563,6 +2695,12 @@ Promise.all([document.fonts ? document.fonts.ready : null, georgianFontReady()])
   document.getElementById("gapCardToggle").setAttribute("aria-checked", gapWithCard);
   bindCardSwitch(document.getElementById("gapCardToggle"), on => {
     gapWithCard = on;
+    if (on && gapSelf) { gapSelf = false; setSwitch(document.getElementById("gapSelfToggle"), false); }
+    updateGapCharts();
+  });
+  bindCardSwitch(document.getElementById("gapSelfToggle"), on => {
+    gapSelf = on;
+    if (on && gapWithCard) { gapWithCard = false; setSwitch(document.getElementById("gapCardToggle"), false); }
     updateGapCharts();
   });
   renderHistory();
