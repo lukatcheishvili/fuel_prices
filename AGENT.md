@@ -430,7 +430,11 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   reserved `.podium-card` line (compact "pump-from" form ≤1024px). `.mode-note` lines under the podium and under the gap
   grid ("No self-service price: Lukoil, Rompetrol") have reserved height that is taken back with a negative bottom
   margin, so toggling never moves the page (tested at 6 widths × 5 fuels × 3 languages). The gap x-scale is
-  computed over pump, card and self-service so the axis never jumps. If no brand has a price for a fuel the podium
+  computed over pump, card and self-service so the axis never jumps. **Axis tick spacing** (`tickInterval(el, max)`): chosen from
+  the plot's real pixel width (panel minus `gapGridLeft` and the 64px right margin) and the measured widths of the
+  "Cheapest"/"+0.00" labels, as the smallest multiple of 0.02 that lands on the max and leaves room; falls back to one step
+  (cheapest / max). Labels also have `hideOverlap` as a safety net. (Replaces width thresholds that ignored the label column
+  and the axis max: on 2026-10-09 the max grew to 0.32 and 16 labels overlapped.) If no brand has a price for a fuel the podium
   shows one "empty" row.
 
 ### Settings tab (saved per browser in localStorage key `gfp.settings.v1`)
@@ -755,3 +759,17 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   pauses and still fails fast on 4xx; the SOCAR helper relies on it. Tested with simulated 500/404/403/timeout/reset
   cases (10 checks) and a full real run. Not changed: the Wissol *history* API timeout warning (known, handled), and the
   runner image notice "ubuntu-latest moves to Ubuntu 26 on 2026-10-19" (consider pinning `ubuntu-24.04` in the workflow).
+- **2026-10-09**: Fixed overlapping x-axis labels in the gap charts (user screenshot: "+0.02 +0.04 ..." run together on Best
+  diesel). Cause: tick spacing came from fixed panel-width thresholds (0.02 above 480px) while the axis max had grown to
+  0.32 and the label column eats width. Spacing is now computed from the plot's pixel width and measured label widths
+  (`tickInterval`), plus `hideOverlap`. Tested with puppeteer: 12 widths (1440-320px) x 3 languages x pump/card/self
+  (324 charts): labels never closer than 6px, except Georgian at 320px where "Cheapest" is hidden by `hideOverlap` and
+  only the max label shows (nothing overlaps).
+- **2026-10-09**: Phone symmetry fix (user's iPhone screenshot: the two "Loyalty card / Self-service" switches had their
+  tracks at different x because each sat right after its own label, and the nav had a big gap between the flag and the
+  tabs but a tiny one before the icons). At <=760px: `.switch-row` is full width with each `.card-switch` set to
+  `space-between`, so every track shares the right edge (same edge as the fuel switch frame); `.section-tools` stretches so
+  the gap-chart switches do the same; `.nav-right` is `display: contents`, so flag | tabs (incl. gear) | language button are
+  spread with equal gaps, and the language icon's edge sits on the gutter. Desktop unchanged. Tested with puppeteer
+  (iPhone UA, 320-760px x en/ka/ru): all four tracks on one right edge, the two nav gaps equal, no overflow, tab underline
+  and language menu still correct. The fuel switch's 2+3 button rows are unchanged on purpose (equal-width within each row).

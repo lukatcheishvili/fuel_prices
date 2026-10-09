@@ -948,21 +948,27 @@
     .only-mobile { display: block; }
     .only-desktop { display: none; }
     .tabs { gap: var(--space-xs); }
-    .nav-right { gap: 12px; }
+    /* Nav: flag | tabs | language, spread with equal gaps (the wrapper dissolves, so the three are siblings
+       of the space-between row; the tabs keep their own box for the sliding underline). */
+    .nav-right { display: contents; }
+    .nav-icon-button { margin-right: calc(-1 * var(--space-xxxs)); }  /* icon edge on the gutter, like the flag and switches */
     .brand-name-long { display: none; }
 
     /* Rhythm: tighter sections on a small screen */
     .section { padding-top: var(--space-lg); }
     .section-title { font-size: 22px; }
     .section-head { margin-bottom: var(--space-xs); }
-    .section-tools { align-items: flex-start; }
+    .section-tools { align-items: stretch; width: 100%; }
     .footnote { text-align: left; }  /* justify leaves gaps on narrow lines */
 
     /* Hero */
     .hero { padding-top: var(--space-md); }
     .hero-title { font-size: 28px; }
     .hero-sub { margin: var(--space-xs) 0 var(--space-sm); }
-    .switch-row { flex-direction: column; align-items: flex-start; gap: var(--space-xxs); }
+    /* Price switches: full width like the fuel switch, label left and every track on the same right edge
+       (their labels differ in length, so tracks used to sit at different x). */
+    .switch-row { flex-direction: column; align-items: stretch; align-self: stretch; width: 100%; gap: var(--space-xxs); }
+    .switch-row .card-switch { width: 100%; max-width: none; justify-content: space-between; }
     :root { --note-gap: 8px; }
 
     /* Fuel switches: full width on two rows (the two diesels, then the three gasolines);
@@ -1767,10 +1773,34 @@ function renderKpis() {
 // ---------- Gap-to-cheapest lollipop charts (Apache ECharts) ----------
 const charts = [];
 
-// Wider tick spacing on narrow panels so the axis labels don't collide.
-// Fewer ticks on narrow panels so the axis labels never collide (phones: cheapest / middle / max).
-const tickInterval = (el, max) => (el.clientWidth < 420 ? max / 2 : el.clientWidth < 480 ? 0.04 : 0.02);
+// Axis tick spacing, chosen from the PLOT's real pixel width (panel minus label column and right margin), the
+// axis max and the measured label widths, so the labels can never collide however wide the label column,
+// the language or the axis max gets. Steps are multiples of 0.02 that land exactly on the max (the smallest
+// step that still leaves room); on a very narrow plot that falls back to a single step (cheapest / max).
+const TICK_STEP = 0.02, GAP_RIGHT = 64;
+const tickLabelWidths = { font: "", zero: 0, value: 0 };
+function tickInterval(el, max) {
+  const font = `400 11px ${token("--font")}`;
+  if (tickLabelWidths.font !== font + t("gap.axisCheapest")) {  // re-measured when the language or font changes
+    const ctx = document.createElement("canvas").getContext("2d");
+    ctx.font = font;
+    tickLabelWidths.font = font + t("gap.axisCheapest");
+    tickLabelWidths.zero = ctx.measureText(t("gap.axisCheapest")).width;
+    tickLabelWidths.value = ctx.measureText("+0.00").width;
+  }
+  const { zero, value } = tickLabelWidths;
+  const minPx = Math.max(zero / 2 + value / 2, value) + 16;  // label-to-label distance incl. breathing room
+  const plot = Math.max(1, el.clientWidth - gapGridLeft - GAP_RIGHT);
+  const steps = Math.round(max / TICK_STEP);
+  for (let k = steps; k >= 1; k--) {
+    const step = max / k;
+    if (Math.abs(step / TICK_STEP - Math.round(step / TICK_STEP)) > 1e-6) continue;  // only whole 0.02 multiples
+    if (plot / k >= minPx) return step;
+  }
+  return max;
+}
 let gapXMax = 0.16;
+let gapGridLeft = 118;
 
 let gapWithCard = settings.showCardPrices;  // gap charts' own switch (independent of the podium switch)
 let gapSelf = false;  // the charts' own self-service switch (exclusive with gapWithCard)
@@ -1839,6 +1869,7 @@ function updateGapCharts() {
     return 30 + Math.max(name, measure.measureText(rowDetail(r)).width);
   };
   const gridLeft = Math.max(118, Math.ceil(Math.max(...categories.flatMap(cat => ranked(cat).map(labelEnd)))) + 16);
+  gapGridLeft = gridLeft;
 
   gapPanels.forEach(({ cat, chart }) => {
     const rows = ranked(cat, gapMode());
@@ -1916,7 +1947,7 @@ function updateGapCharts() {
       animationDurationUpdate: slow,
       animationEasingUpdate: "cubicOut",
       textStyle: { fontFamily: C.font },
-      grid: { left: gridLeft, right: 64, top: 6, bottom: 28 },
+      grid: { left: gridLeft, right: GAP_RIGHT, top: 6, bottom: 28 },
       xAxis: {
         type: "value",
         min: 0,
@@ -1928,6 +1959,7 @@ function updateGapCharts() {
         axisLabel: {
           color: C.body,
           fontSize: 11,
+          hideOverlap: true,  // last line of defence; tickInterval() already leaves room
           formatter: v => (v === 0 ? t("gap.axisCheapest") : "+" + v.toFixed(2))
         }
       },
