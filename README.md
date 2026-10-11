@@ -1,6 +1,6 @@
 # Georgia Fuel Prices
 
-**🔗 Live dashboard: [georgia-fuel-prices.vercel.app](https://georgia-fuel-prices.vercel.app)**
+**🔗 Live dashboard: georgisfuel.ge**
 
 A dashboard of current fuel prices from Georgia's main distributors: **Wissol**, **SOCAR**,
 **Gulf**, **Lukoil** and **Rompetrol**. Built for drivers who want to see the cheapest place to fill up at a glance,
