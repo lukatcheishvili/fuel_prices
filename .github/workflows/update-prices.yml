@@ -59,6 +59,9 @@ jobs:
             exit 0
           fi
           git commit -m "Update fuel prices $(TZ=Asia/Tbilisi date '+%Y-%m-%d %H:%M') (Tbilisi)"
+          # A push to main during the run (e.g. a code change) would get this push rejected, so
+          # replay the data commit on top of it first. Only this job writes data/, so it applies cleanly.
+          git pull --rebase origin main
           git push
 
       - name: Flag failed sources

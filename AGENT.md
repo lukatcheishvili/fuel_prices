@@ -780,3 +780,7 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   compose file are relative, so nothing in the repo changed). The Postgres data is in the named volume
   `airflow_postgres-db-volume` and survived (same compose project name `airflow`). After any future move, recreate the
   containers the same way. Health endpoint: metadatabase, scheduler, triggerer, dag_processor all healthy.
+- **2026-10-11**: Workflow run 38126129171 failed at "Commit and push": Airflow started it when the containers came back,
+  and the AGENT.md commit above was pushed to main mid-run, so the bot's `git push` was rejected ("fetch first"). Scraping
+  itself was fine. The push step now runs `git pull --rebase origin main` first (only the bot writes `data/`, so the
+  rebase is always clean).
