@@ -816,3 +816,9 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   tooltip): no CSP violations or errors, framing refused, and a planted `<img onerror>`/`<script>` product name renders
   as text. Left to the user: check the Airflow GitHub token is fine-grained / this repo only / Actions RW / expiring,
   2FA on GitHub, Vercel and Magti, and (once the domain is live) registrar lock, auto-renew, CAA and no-mail records.
+- **2026-10-11**: **georgiafuel.ge is live** (HTTPS 200, `www.` 308-redirects to the apex). After the user set the nameservers at Magti
+  to `ns1/ns2.vercel-dns.com`, Vercel's servers still refused queries: the domain had been added without a DNS zone
+  (`zone: false`) and neither the API nor the CLI could add records ("is not a DNS zone"). Fix: `vercel domains rm georgiafuel.ge`,
+  `vercel domains add georgiafuel.ge` (this creates the zone), then A `@` -> 216.198.79.1 and CNAME `www` -> cname.vercel-dns.com
+  as Vercel DNS records, and both names re-attached to the project (www redirect 308 -> apex). Still left to the user: registrar lock,
+  auto-renew, CAA, no-mail records (see the security audit entry).
