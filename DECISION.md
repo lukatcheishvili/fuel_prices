@@ -15,3 +15,7 @@ this date). Rules and project state stay in `AGENT.md`.
   intentional English-fallback card and tier names); no inline scripts or handlers; no secrets in tracked files; browser smoke
   test on georgia-fuel-prices.vercel.app in real Chrome at 1440 and 390 px (28 checks: podium height constant across the 5
   fuels, card/self-service exclusivity, en/ka/ru switching, charts drawn, tabs, no console or network errors).
+- **2026-10-11**: Merged Dependabot PRs #1 (`actions/checkout` 7.0.1) and #2 (`actions/setup-python` 7.0.0) at the user's request
+  (squash, branches deleted). A manual run (38141024554) on the new versions succeeded: prices, history and push all green.
+  Annotations were the known ones: Wissol's history API times out from GitHub's runners (fallback keeps its series), and the
+  notice that `ubuntu-latest` becomes Ubuntu 26 on 2026-10-19 (consider pinning `ubuntu-24.04`). Project declared finished.
