@@ -2,12 +2,13 @@
 
 ## Rules for any agent working in this folder
 
-- **Update this file after every 10 prompts/turns in a session, or whenever the user explicitly asks you to.**
-  Update the "What Needs To Be Done" section if priorities changed, and always append a new
-  entry to the "Log" section at the bottom (never delete old log entries).
-- Keep "What Needs To Be Done" ABOVE the Log. Keep the Log at the very BOTTOM of the file,
-  in chronological order (oldest first), so the history of what was actually done is easy to scan.
-- Do not rewrite or summarize away older log entries to save space — append only.
+- **New log entries go in `DECISION.md`, not here** (user's rule, 2026-10-11). Append one entry to `DECISION.md` after
+  every 10 prompts/turns in a session, whenever a decision is made or something notable is done, and whenever the user asks.
+  The "Log" at the bottom of this file is the history up to 2026-10-11 and stays as it is: never delete or rewrite its entries,
+  and don't add new ones to it.
+- This file keeps the current state: update the project summary, rules and "What Needs To Be Done" when they change
+  (keep "What Needs To Be Done" ABOVE the Log, and the Log at the very bottom).
+- `DECISION.md` is chronological (oldest first), append only, like the old Log.
 
 ## Model routing (user's rule, 2026-10-08: save tokens)
 

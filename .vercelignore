@@ -1,6 +1,7 @@
 # Only the dashboard itself (index.html, app.js, i18n.js, assets/, data/) is published.
 # Notes, docs, build scripts, secrets and CI config stay in the repo but off the public site.
 AGENT.md
+DECISION.md
 CLAUDE.md
 .claude/
 DESIGN.md
