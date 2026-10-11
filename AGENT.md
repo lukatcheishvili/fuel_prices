@@ -32,7 +32,7 @@ A single static page: `index.html` (vanilla JS + CSS, interface text in `i18n.js
 Google Fonts) reading `data/prices.js` and `data/history.js`, which a GitHub Action regenerates and
 commits; Apache Airflow on the user's PC (`airflow/`) starts that Action on schedule.
 No build step, no backend. Logos live in `assets/logos/`. All code lives in the git repo
-`Desktop\Fuel\fuel_prices` (moved there 2026-10-03), pushed to the public GitHub repo
+`Desktop\github\fuel_prices` (moved there 2026-10-11, from `Desktop\Fuel\fuel_prices`), pushed to the public GitHub repo
 `lukatcheishvili/fuel_prices` (branch `main`) and deployed on Vercel (team
 `lukatcheishvilis-projects`). `.vercelignore` keeps AGENT.md, DESIGN.md, README.md, scripts/ and
 airflow/ off the public site.
@@ -773,3 +773,10 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   spread with equal gaps, and the language icon's edge sits on the gutter. Desktop unchanged. Tested with puppeteer
   (iPhone UA, 320-760px x en/ka/ru): all four tracks on one right edge, the two nav gaps equal, no overflow, tab underline
   and language menu still correct. The fuel switch's 2+3 button rows are unchanged on purpose (equal-width within each row).
+- **2026-10-11**: User moved the repo from `Desktop\Fuel\fuel_prices` to `Desktop\github\fuel_prices`; afterwards
+  http://localhost:8080 didn't open. Cause: the Airflow containers were still bound to the old folder, Docker recreated
+  empty `dags/logs/config/plugins` there, and every Airflow part crashed with `PermissionError` writing
+  `config/airflow.cfg`. Fix: `docker compose down` + `docker compose up -d` from the new `airflow/` folder (paths in the
+  compose file are relative, so nothing in the repo changed). The Postgres data is in the named volume
+  `airflow_postgres-db-volume` and survived (same compose project name `airflow`). After any future move, recreate the
+  containers the same way. Health endpoint: metadatabase, scheduler, triggerer, dag_processor all healthy.
