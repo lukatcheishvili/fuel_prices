@@ -196,7 +196,16 @@ def main():
         if day == end and company in sources:
             for cat in CATEGORIES:
                 sources[company][cat].append((day, prices[cat]))
-    series = {cat: {co: daily(pts[cat], days) for co, pts in sources.items()} for cat in CATEGORIES}
+    # Same 1-10 GEL sanity range as update_prices.py: a broken or tampered archive row is dropped
+    # (the previous price carries on) instead of putting an absurd value on the charts.
+    for company, pts in sources.items():
+        for cat in CATEGORIES:
+            bad = [p for p in pts[cat] if p[1] is not None and not 1 <= p[1] <= 10]
+            if bad:
+                print(f"::warning::{company} {cat}: ignored {len(bad)} implausible archive price(s), "
+                      f"e.g. {bad[0][1]} on {bad[0][0]}")
+                pts[cat] = [p for p in pts[cat] if p not in bad]
+    series ={cat: {co: daily(pts[cat], days) for co, pts in sources.items()} for cat in CATEGORIES}
 
     payload = {"generated": date.today().isoformat(), "start": start.isoformat(),
                "end": end.isoformat(), "series": series}

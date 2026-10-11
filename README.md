@@ -31,12 +31,16 @@ from cdnjs, and the Inter font. No build step. The design follows the Ferrari de
 in [`DESIGN.md`](DESIGN.md).
 
 ```
-index.html                    the dashboard
+index.html                    the dashboard (markup and CSS)
+app.js                        the dashboard's JavaScript
+i18n.js                       interface text in English, Georgian and Russian
+vercel.json                   security headers (Content-Security-Policy etc.) served by Vercel
 assets/                       favicon, flag, company logos
 data/prices.js                current prices (updated four times a day)
 data/history.js               5-year daily price history (generated)
 scripts/update_prices.py      reads the five official price pages (pump and self-service prices) -> data/prices.js
 scripts/build_history.py      rebuilds data/history.js from the companies' official archives
+scripts/requirements.txt      the scripts' one dependency, pinned by version and hash
 .github/workflows/update-prices.yml   runs both scripts and commits the new data
 airflow/                   Apache Airflow (Docker) that starts the workflow on schedule
 AGENT.md                   project notes, decisions and log (read this first when contributing)

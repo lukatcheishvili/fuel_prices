@@ -28,7 +28,7 @@
 
 A dashboard tracking live fuel prices for Georgia's five major fuel distributors: **Wissol**,
 **SOCAR Georgia**, **Gulf Georgia**, **Lukoil Georgia**, **Rompetrol Georgia** (added 2026-10-04).
-A single static page: `index.html` (vanilla JS + CSS, interface text in `i18n.js`: English, Georgian, Russian; Apache ECharts 6.1.0 via cdnjs, Inter via
+A single static page: `index.html` (markup + CSS; its JavaScript lives in `app.js`, interface text in `i18n.js`: English, Georgian, Russian; Apache ECharts 6.1.0 via cdnjs, Inter via
 Google Fonts) reading `data/prices.js` and `data/history.js`, which a GitHub Action regenerates and
 commits; Apache Airflow on the user's PC (`airflow/`) starts that Action on schedule.
 No build step, no backend. Logos live in `assets/logos/`. All code lives in the git repo
@@ -36,6 +36,21 @@ No build step, no backend. Logos live in `assets/logos/`. All code lives in the 
 `lukatcheishvili/fuel_prices` (branch `main`) and deployed on Vercel (team
 `lukatcheishvilis-projects`). `.vercelignore` keeps AGENT.md, DESIGN.md, README.md, scripts/ and
 airflow/ off the public site.
+
+### Security rules (from the 2026-10-11 audit; keep them when changing code)
+- **No inline scripts.** `vercel.json` sends a Content-Security-Policy with `script-src 'self' https://cdnjs.cloudflare.com`,
+  so an inline `<script>` or `onclick="..."` is blocked on the live site. Page JavaScript goes in `app.js`. A new outside
+  host (CDN, font, image, API) must be added to the CSP, or it won't load.
+- **CDN scripts carry `integrity=`** (Subresource Integrity). When upgrading ECharts, take the new sha512 from
+  `https://api.cdnjs.com/libraries/echarts/<version>?fields=sri`.
+- **Scrapers write numbers and fixed strings only**, never text copied from a company's page. `app.js` also HTML-escapes
+  every string from the data files on load (`escapeStrings`), as a second line of defence.
+- **CI pins**: actions by commit SHA (comment shows the tag), Python packages by version + hash in
+  `scripts/requirements.txt`. Dependabot (`.github/dependabot.yml`) proposes updates monthly.
+- **GitHub settings**: ruleset on `main` blocks force pushes and deletion; only GitHub-owned actions may run, pinned by
+  SHA; Dependabot alerts on; secret scanning + push protection on.
+- **Secrets** live only in git-ignored `.env` files and the Airflow Variable `github_token`; `.vercelignore` also excludes
+  `.env*`, so even a CLI deploy can't publish them.
 
 **The user drives a diesel car.** The diesel view is the most important thing on the page and
 must always stay at the very top.
@@ -784,3 +799,16 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   and the AGENT.md commit above was pushed to main mid-run, so the bot's `git push` was rejected ("fetch first"). Scraping
   itself was fine. The push step now runs `git pull --rebase origin main` first (only the bot writes `data/`, so the
   rebase is always clean).
+- **2026-10-11**: Custom domain **georgiafuel.ge** (bought at Magti) added to the Vercel project, `www.` 308-redirects to
+  the apex. Magti offers no self-service DNS: the user emailed support to set the nameservers to
+  `ns1/ns2.vercel-dns.com` (fallback: A `@` 216.198.79.1, CNAME `www` cname.vercel-dns.com). Not live yet.
+- **2026-10-11**: Security audit (user request; a read-only agent, then fixes). Nothing critical: no secret ever
+  committed, every sensitive path 404s on the live site, Airflow only on 127.0.0.1. Fixed: inline script moved to
+  `app.js`; `vercel.json` with CSP, X-Frame-Options, nosniff, Referrer/Permissions-Policy, COOP, HSTS; SRI on ECharts;
+  `escapeStrings` on the data files; history prices outside 1-10 GEL dropped with a warning; pip install by hash;
+  actions pinned by SHA; Dependabot config; `.vercelignore` covers `.env*`, `.github/`, `.vercel/`. GitHub: ruleset on
+  main (no force push / deletion), GitHub-owned actions only + SHA pinning required, Dependabot alerts on. Airflow's
+  Postgres password replaced with a random one. Tested in Chrome with the real headers (1440 + 390px, en/ka, every tab,
+  tooltip): no CSP violations or errors, framing refused, and a planted `<img onerror>`/`<script>` product name renders
+  as text. Left to the user: check the Airflow GitHub token is fine-grained / this repo only / Actions RW / expiring,
+  2FA on GitHub, Vercel and Magti, and (once the domain is live) registrar lock, auto-renew, CAA and no-mail records.

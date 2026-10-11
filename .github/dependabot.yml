@@ -1,0 +1,12 @@
+# Opens a pull request when a pinned action (by commit) or Python package (by hash) has a newer
+# or security-fixed release, so the pins in update-prices.yml and scripts/requirements.txt stay current.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+  - package-ecosystem: pip
+    directory: /scripts
+    schedule:
+      interval: monthly
