@@ -50,9 +50,14 @@ airflow/ off the public site.
 - **GitHub settings**: ruleset on `main` blocks force pushes and deletion; only GitHub-owned actions may run, pinned by
   SHA; Dependabot alerts on; secret scanning + push protection on.
 - **Bots**: `robots.txt` lets search engines in (they need `data/` and `app.js` to render the page) and tells AI/scraping
-  crawlers to stay out. Vercel's automatic DDoS mitigation covers every plan; the project Firewall adds Bot Protection
-  (challenge), the AI Bots rule (deny) and a per-IP rate limit. The Firewall config can't be created through the API
-  until it has been set up once in the dashboard (API answered "Seawall Config not found", 2026-10-11).
+  crawlers to stay out. Vercel's automatic DDoS mitigation covers every plan; the project Firewall (set up 2026-10-11 with
+  the CLI, `vercel firewall rules ... ` then `vercel firewall publish`, run from any folder with `--scope
+  lukatcheishvilis-projects --project georgia-fuel-prices`) adds Bot Protection (challenge), AI Bots (deny) and the custom
+  rule "Per-IP rate limit" (300 requests/60 s per IP, over that = challenge for 5 min; a page view is ~15 requests).
+  Non-browser clients (curl, scripts) now get the "Vercel Security Checkpoint" (403/429); real browsers and verified
+  crawlers pass. Scanning the site for hidden paths gets your IP blocked for up to an hour ("Malicious Client").
+- **Mail spoofing**: georgiafuel.ge sends and receives no mail, so its DNS says so: TXT `v=spf1 -all`, `_dmarc`
+  `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s`, null MX (`0 .`). If mail is ever set up on the domain, change all three.
 - **Secrets** live only in git-ignored `.env` files and the Airflow Variable `github_token`; `.vercelignore` also excludes
   `.env*`, so even a CLI deploy can't publish them.
 
@@ -822,3 +827,14 @@ Sections are separated by `xl` (64px). Max content width 1280px. Page gutter 32p
   `vercel domains add georgiafuel.ge` (this creates the zone), then A `@` -> 216.198.79.1 and CNAME `www` -> cname.vercel-dns.com
   as Vercel DNS records, and both names re-attached to the project (www redirect 308 -> apex). Still left to the user: registrar lock,
   auto-renew, CAA, no-mail records (see the security audit entry).
+- **2026-10-11**: Second security audit (user request: no leaks, no scams, no DDoS), then fixes. Clean: no sensitive path is
+  served (all 404), headers/CSP/HSTS correct on the new domain, `app.js` DOM writes all get escaped data, no secrets in the
+  whole git history (only the empty `airflow/.env.example`), GitHub ruleset/secret scanning/SHA pinning/one collaborator,
+  Airflow on 127.0.0.1 only, CAA managed by Vercel (letsencrypt, pki.goog, sectigo), preview deployments behind Vercel login.
+  Gaps fixed: (1) the Vercel Firewall had never been configured (CLI: "Not configured") -> Bot Protection challenge, AI Bots
+  deny, per-IP rate limit, published; verified in real Chrome (3 podium rows, 10 charts, no errors on the vercel.app host).
+  (2) no mail records -> SPF `-all`, DMARC reject, null MX added in Vercel DNS. Also: repo wiki turned off. Lesson: probing
+  ~20 hidden paths in a few seconds got the tester's IP blocked on georgiafuel.ge for up to an hour; do audits slowly, or
+  use the vercel.app host. Left: Dependabot PRs #1 (checkout 7.0.1) and #2 (setup-python 7.0.0) reviewed and look safe for
+  this workflow, not merged; user's own items: Magti registrar lock + auto-renew, 2FA (Magti, Vercel, GitHub), Airflow token
+  scope/expiry. Optional: redirect the vercel.app address to georgiafuel.ge, register georgiafuel.com, DNSSEC.
