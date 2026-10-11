@@ -1,0 +1,27 @@
+# Search engines may index the dashboard. AI training and scraping crawlers may not.
+# Polite crawlers follow this file; the rest are handled by Vercel's firewall (bot protection, AI bot rule, rate limit).
+
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: OAI-SearchBot
+User-agent: ClaudeBot
+User-agent: Claude-Web
+User-agent: anthropic-ai
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: CCBot
+User-agent: Bytespider
+User-agent: PerplexityBot
+User-agent: Meta-ExternalAgent
+User-agent: FacebookBot
+User-agent: Amazonbot
+User-agent: Diffbot
+User-agent: omgili
+User-agent: ImagesiftBot
+User-agent: cohere-ai
+Disallow: /
+
+# Everyone else (Google, Bing...) may crawl, including data/ and app.js: search engines run the
+# page's JavaScript, and without the data files they would index an empty dashboard.
+User-agent: *
+Allow: /

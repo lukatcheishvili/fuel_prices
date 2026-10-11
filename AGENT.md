@@ -49,6 +49,10 @@ airflow/ off the public site.
   `scripts/requirements.txt`. Dependabot (`.github/dependabot.yml`) proposes updates monthly.
 - **GitHub settings**: ruleset on `main` blocks force pushes and deletion; only GitHub-owned actions may run, pinned by
   SHA; Dependabot alerts on; secret scanning + push protection on.
+- **Bots**: `robots.txt` lets search engines in (they need `data/` and `app.js` to render the page) and tells AI/scraping
+  crawlers to stay out. Vercel's automatic DDoS mitigation covers every plan; the project Firewall adds Bot Protection
+  (challenge), the AI Bots rule (deny) and a per-IP rate limit. The Firewall config can't be created through the API
+  until it has been set up once in the dashboard (API answered "Seawall Config not found", 2026-10-11).
 - **Secrets** live only in git-ignored `.env` files and the Airflow Variable `github_token`; `.vercelignore` also excludes
   `.env*`, so even a CLI deploy can't publish them.
 
