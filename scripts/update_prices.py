@@ -13,9 +13,10 @@ It never fails a run: if it can't be read, the previous self-service price is ke
 Every price is validated before anything is written:
   * it must be found on the page and be between 1 and 10 GEL (0.00 = "not sold right now"),
   * it must not move more than 25% from the last saved value (a parsing slip, not a real change).
-If a company fails, its last good prices are kept with their older "checked" time and the script
-exits with status 1 so the GitHub Action is marked failed (and GitHub emails the repo owner).
-The other companies are still updated.
+If a company fails, its last good prices are kept with their older "checked" time and the other
+companies are still updated. A failure that is only a blip (the kept prices are younger than STALE_HOURS)
+is a ::warning:: and the run stays green; once the kept prices are older than that, or there are none,
+the script exits with status 1 so the GitHub Action is marked failed (and GitHub emails the repo owner).
 """
 
 import collections
@@ -57,18 +58,22 @@ EXTRAS = {"Wissol": [("Diesel Energy", "not Euro 5, aimed at machinery")]}
 
 FETCH_TRIES = 4  # a company's server sometimes answers 500 or stalls for a moment: try again before giving up
 FETCH_PAUSE = 8  # seconds before the 2nd try, doubled for each further one (8, 16, 32)
+STALE_HOURS = 24  # a source may keep failing this long (its last good prices stay on the site) before the run is red
 
 
 def fetch(url):
-    """GET a URL. Temporary trouble (HTTP 5xx, timeout, connection error) is retried with growing pauses;
-    anything else (404, 403, ...) is raised at once."""
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    """GET a URL. Temporary trouble (HTTP 5xx, 403/429, timeout, connection error) is retried with growing
+    pauses; anything else (404, ...) is raised at once. 403 counts as temporary because rompetrol.ge (behind
+    Cloudflare) now and then refuses a GitHub runner for a moment (runs #70 and #73) and answers the next try."""
+    req = urllib.request.Request(url, headers={
+        "User-Agent": UA, "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9"})
     for attempt in range(1, FETCH_TRIES + 1):
         try:
             with urllib.request.urlopen(req, timeout=60) as resp:
                 return resp.read()
         except urllib.error.HTTPError as e:  # checked first: HTTPError is a kind of URLError
-            err, problem, temporary = e, f"HTTP {e.code}", e.code >= 500
+            err, problem, temporary = e, f"HTTP {e.code}", e.code >= 500 or e.code in (403, 429)
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
             err, problem, temporary = e, str(getattr(e, "reason", e)) or type(e).__name__, True
         if not temporary or attempt == FETCH_TRIES:
@@ -438,6 +443,14 @@ def build_company(company, found, previous):
     return out
 
 
+def is_stale(prev, now):
+    """True if a company's kept prices are older than STALE_HOURS (or have no readable time)."""
+    try:
+        return now - datetime.fromisoformat(prev["checkedAt"]) > timedelta(hours=STALE_HOURS)
+    except (KeyError, ValueError, TypeError):
+        return True
+
+
 def main():
     now = datetime.now(TBILISI)
     previous = load_previous()
@@ -456,10 +469,13 @@ def main():
                 + (f" self-service {v['selfService']}" if v.get("selfService") else "")
                 for k, v in data.items() if isinstance(v, dict) and "price" in v))
         except Exception as e:  # network error, layout change, implausible value
-            failures.append(f"{company}: {e}")
             if prev:
                 companies[company] = prev  # keep the last good prices (and their older checkedAt)
             print(f"FAIL {company}: {e}" + ("  -> kept last good prices" if prev else ""), file=sys.stderr)
+            if prev and not is_stale(prev, now):
+                print(f"::warning::{company} could not be read ({e}); showing its prices from {prev['checkedAt']}")
+            else:
+                failures.append(f"{company}: {e}")
 
     if not companies:
         print("No prices at all; nothing written.", file=sys.stderr)

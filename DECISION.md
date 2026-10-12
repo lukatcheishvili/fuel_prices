@@ -22,3 +22,10 @@ this date). Rules and project state stay in `AGENT.md`.
 - **2026-10-12**: Workflow run #70 failed because rompetrol.ge answered the GitHub runner with HTTP 403 (bot filter). By design the
   script kept Rompetrol's last good prices, the other four were committed, and the final step marked the run failed. Next run (#71)
   was fine. Not changed: 403 is still raised at once; option offered to retry 403 like 5xx. README: "georgiafuel.ge" is now a link.
+- **2026-10-12**: Run #73 (scheduled, 12:00 UTC) failed the same way as #70: rompetrol.ge answered the GitHub runner with HTTP 403
+  (Cloudflare; fine from other networks, 200 from the dev PC), the other four sources were fine and committed, and the final step marked the
+  run red. Two fixes in `scripts/update_prices.py`: (1) `fetch()` retries 403 and 429 like 5xx/timeouts and sends Accept /
+  Accept-Language headers; (2) a failing source only fails the run when its kept prices are older than `STALE_HOURS` = 24, otherwise
+  it is a `::warning::` (the limit is a full day because the overnight gap between slots is 14 h). Chose this over changing the data
+  source: nothing else publishes Rompetrol prices and the 403 is on their side. Added `scripts/test_update_prices.py` (retry,
+  stale and exit-code checks, all pass). Not fixable from our side: if Cloudflare keeps blocking the runner for 24 h the run does go red.

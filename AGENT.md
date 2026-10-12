@@ -214,13 +214,18 @@ and `scripts/build_history.py`, then commits as github-actions[bot] and pushes �
   columns); Lukoil = homepage, where the price comes BEFORE the name; Rompetrol = /en homepage table.
   Self-service prices have their own readers, see "Self-service prices".
 - History now runs through TODAY: the last day uses the live prices from data/prices.js.
-- **Retries**: `fetch()` tries a URL up to 4 times (pauses 8/16/32 s) on HTTP 5xx, timeouts and connection errors, and
-  raises at once on 4xx. Added 2026-10-08 after wissol.ge answered one run with "HTTP 500" (its server is flaky: 200, 200,
-  500 and 12 s responses in a row) and the whole run was marked failed. Retries are logged as `retry n/3: <url> -> HTTP 500`.
+- **Retries**: `fetch()` tries a URL up to 4 times (pauses 8/16/32 s) on HTTP 5xx, **403, 429**, timeouts and connection
+  errors, and raises at once on other 4xx (404...). Added 2026-10-08 after wissol.ge answered one run with "HTTP 500" (its
+  server is flaky: 200, 200, 500 and 12 s responses in a row) and the whole run was marked failed; 403/429 added 2026-10-12
+  after rompetrol.ge (behind Cloudflare) refused the GitHub runner in runs #70 and #73. Retries are logged as
+  `retry n/3: <url> -> HTTP 500`. Requests also send browser-like Accept / Accept-Language headers.
 - Validation: present, 1–10 GEL, ≤25% jump vs the previous file; `0.00` = not sold → `null`.
-  A failing company keeps its last good data (and older checkedAt) and the run exits 1 (failed run →
-  GitHub email). The page treats a null category as "not sold": unranked, "Not sold" on the board,
-  no dot in that gap chart.
+  A failing company keeps its last good data (and older checkedAt). **Since 2026-10-12 a failure only turns the run red
+  (GitHub email) when the kept data is older than `STALE_HOURS` (24 h) or there is none**; a fresher one is a
+  `::warning::` annotation and the run stays green. (Before, any failing source made the run red.) The overnight gap
+  between slots is 14 h, so the limit has to be a full day. The page treats a null category as "not sold": unranked,
+  "Not sold" on the board, no dot in that gap chart. `python scripts/test_update_prices.py` checks the retry and
+  stale rules (not run in CI).
 - **Wissol's history API (`api.wissol.ge`) times out from GitHub's runners** (seen on the first two runs;
   likely blocks non-Georgian/cloud IPs). Wissol's price PAGE works fine. `build_history.py` therefore
   retries each archive and, if one is unreachable, keeps that company's existing series and extends it
