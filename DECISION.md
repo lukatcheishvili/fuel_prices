@@ -19,3 +19,6 @@ this date). Rules and project state stay in `AGENT.md`.
   (squash, branches deleted). A manual run (38141024554) on the new versions succeeded: prices, history and push all green.
   Annotations were the known ones: Wissol's history API times out from GitHub's runners (fallback keeps its series), and the
   notice that `ubuntu-latest` becomes Ubuntu 26 on 2026-10-19 (consider pinning `ubuntu-24.04`). Project declared finished.
+- **2026-10-12**: Workflow run #70 failed because rompetrol.ge answered the GitHub runner with HTTP 403 (bot filter). By design the
+  script kept Rompetrol's last good prices, the other four were committed, and the final step marked the run failed. Next run (#71)
+  was fine. Not changed: 403 is still raised at once; option offered to retry 403 like 5xx. README: "georgiafuel.ge" is now a link.
