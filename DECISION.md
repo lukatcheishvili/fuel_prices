@@ -39,3 +39,6 @@ this date). Rules and project state stay in `AGENT.md`.
   VM (user keeps the current stack; note GitHub's cron fires only ~2 of 8 slots a day, so with the laptop off the manual "Run workflow"
   button is the fallback), parallel fetching, a second Rompetrol source (none exists), auto-accepting >25% jumps, a CI test workflow.
   Tests: `scripts/test_update_prices.py` extended (all pass), push loop simulated (fails twice then works / always fails), YAML parsed.
+- **2026-10-12**: Verified the failure-email changes on GitHub (run 38250499264, ubuntu-24.04): green, job 69 s (was ~350 s), "Refresh 5-year
+  history" 27 s (was 306 s), Wissol fallback warning still shown, all five companies' history complete up to today. Failed runs so far: 7 of 76,
+  none since the fixes. To watch over the next 24 h: `gh run list --workflow update-prices.yml` should show no new failure.
