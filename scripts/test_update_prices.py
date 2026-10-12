@@ -1,5 +1,6 @@
 """Self-check for the retry and stale-source rules of update_prices.py.  Run:  python scripts/test_update_prices.py"""
 
+import contextlib
 import io
 import sys
 import urllib.error
@@ -63,7 +64,27 @@ def run_main(prev_company):
         up.OUT.unlink(missing_ok=True)
 
 
+def run_main_output(prev_company):
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        code = run_main(prev_company)
+    return code, buf.getvalue()
+
+
 kept = {"super": {"name": "efix Super", "price": 4.5}}
-assert run_main({**kept, **at(5)}) == 0
-assert run_main({**kept, **at(up.STALE_HOURS + 1)}) == 1
+code, out = run_main_output({**kept, **at(5)})
+assert code == 0 and "::warning::Rompetrol" in out and "::error::" not in out
+code, out = run_main_output({**kept, **at(up.STALE_HOURS + 1)})
+assert code == 1 and "::error::Rompetrol" in out and "older than" in out
+assert run_main(kept) == 1  # kept prices without a time are treated as stale, and don't crash the message
+
+# build_history: the Wissol archive gets one quick try (it never answers from GitHub), the others keep their retries
+import build_history as bh
+calls = fake_urlopen(403)
+try:
+    bh.fetch("https://x.test", attempts=1, timeout=20); raise SystemExit("should raise")
+except urllib.error.HTTPError:
+    assert len(calls) == 1
+calls = fake_urlopen(403, b"ok")
+assert bh.fetch("https://x.test") == b"ok" and len(calls) == 2
 print("all checks passed")

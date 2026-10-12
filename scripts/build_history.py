@@ -34,12 +34,12 @@ PRICES = ROOT / "data" / "prices.js"
 CATEGORIES = ["premiumDiesel", "euroDiesel", "super", "premium", "petrol"]
 
 
-def fetch(url, attempts=3):
+def fetch(url, attempts=3, timeout=90):
     """GET with retries: archive servers are occasionally slow to answer from GitHub's runners."""
     for attempt in range(1, attempts + 1):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": UA})
-            with urllib.request.urlopen(req, timeout=90) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return resp.read()
         except Exception:
             if attempt == attempts:
@@ -74,7 +74,9 @@ def socar(start, end):
 def wissol():
     names = {"ეკო დიზელი": "premiumDiesel", "ევრო დიზელი": "euroDiesel",
              "ეკო სუპერი": "super", "ეკო პრემიუმი": "premium", "ევრო რეგულარი": "petrol"}
-    data = json.loads(fetch("https://api.wissol.ge/fuelpricehistory/?days=4000"))["data"]
+    # api.wissol.ge never answers from GitHub's runners (it did 3 x 90 s of waiting every run), so one quick try;
+    # main() falls back to the existing series. From a Georgian IP it answers in seconds.
+    data = json.loads(fetch("https://api.wissol.ge/fuelpricehistory/?days=4000", attempts=1, timeout=20))["data"]
     points = {c: [] for c in CATEGORIES}
     for s in data:
         if s["name"] in names:

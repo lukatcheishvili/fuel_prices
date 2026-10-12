@@ -218,7 +218,15 @@ and `scripts/build_history.py`, then commits as github-actions[bot] and pushes �
   errors, and raises at once on other 4xx (404...). Added 2026-10-08 after wissol.ge answered one run with "HTTP 500" (its
   server is flaky: 200, 200, 500 and 12 s responses in a row) and the whole run was marked failed; 403/429 added 2026-10-12
   after rompetrol.ge (behind Cloudflare) refused the GitHub runner in runs #70 and #73. Retries are logged as
-  `retry n/3: <url> -> HTTP 500`. Requests also send browser-like Accept / Accept-Language headers.
+  `retry n/3: <url> -> HTTP 500`. Requests also send browser-like Accept / Accept-Language headers, with a 30 s timeout
+  per request (the sites answer in 1-12 s).
+- **Workflow safety nets (2026-10-12)**: `runs-on: ubuntu-24.04` (pinned, not `ubuntu-latest`); step timeouts 6 min (prices)
+  and 4 min (history) and a 10 min job limit, so a hung site can't block the commit step; the commit step tries
+  `git pull --rebase` + `git push` up to 3 times. **Red run = something a person must look at**: a source stale for >24 h,
+  no prices at all, a push failing 3 times, or a script crash; the `::error::` line names the source and its age.
+  Everything else is a `::warning::`. Expected: almost no failure emails; one that arrives is real.
+- **Wissol's history API gets ONE 20 s try** (`build_history.wissol()`), because it never answers from GitHub's runners and
+  3 x 90 s of waiting made every run ~6 min instead of ~1 min. The fallback (existing series + latest price) is unchanged.
 - Validation: present, 1–10 GEL, ≤25% jump vs the previous file; `0.00` = not sold → `null`.
   A failing company keeps its last good data (and older checkedAt). **Since 2026-10-12 a failure only turns the run red
   (GitHub email) when the kept data is older than `STALE_HOURS` (24 h) or there is none**; a fresher one is a

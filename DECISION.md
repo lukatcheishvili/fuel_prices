@@ -29,3 +29,13 @@ this date). Rules and project state stay in `AGENT.md`.
   it is a `::warning::` (the limit is a full day because the overnight gap between slots is 14 h). Chose this over changing the data
   source: nothing else publishes Rompetrol prices and the 403 is on their side. Added `scripts/test_update_prices.py` (retry,
   stale and exit-code checks, all pass). Not fixable from our side: if Cloudflare keeps blocking the runner for 24 h the run does go red.
+- **2026-10-12**: Failure-email strategy (planned in Opus plan mode, then implemented). Reviewed all 7 failed runs of 75: #1 Wissol history
+  timeout (fallback added 4 Oct), #5/#9/#60 push rejected by a concurrent push to main (`ref: main` + `pull --rebase`), #43 wissol.ge
+  HTTP 500 (retries), #70/#73 rompetrol.ge 403 from Cloudflare (403/429 retried + 24 h staleness rule, commit dabdf2c). Every one was an
+  outside hiccup or a race that turned into a red run although the site kept working. New finding: the history step took ~306 s of ~350 s per
+  run because Wissol's archive never answers from GitHub (3 x 90 s). Changes: Wissol history gets one 20 s try (run ~6 min -> ~1 min);
+  request timeout 60 -> 30 s; `::error::` names the stale source and its age; workflow pinned to `ubuntu-24.04` (ubuntu-latest becomes
+  Ubuntu 26 on 19 Oct), step timeouts 6/4 min, job 10 min, 3-try `pull --rebase` + `push` loop. Not done on purpose: external scheduler or
+  VM (user keeps the current stack; note GitHub's cron fires only ~2 of 8 slots a day, so with the laptop off the manual "Run workflow"
+  button is the fallback), parallel fetching, a second Rompetrol source (none exists), auto-accepting >25% jumps, a CI test workflow.
+  Tests: `scripts/test_update_prices.py` extended (all pass), push loop simulated (fails twice then works / always fails), YAML parsed.

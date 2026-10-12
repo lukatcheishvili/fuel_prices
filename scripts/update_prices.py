@@ -70,7 +70,7 @@ def fetch(url):
         "Accept-Language": "en-US,en;q=0.9"})
     for attempt in range(1, FETCH_TRIES + 1):
         try:
-            with urllib.request.urlopen(req, timeout=60) as resp:
+            with urllib.request.urlopen(req, timeout=30) as resp:  # the sites answer in 1-12 s
                 return resp.read()
         except urllib.error.HTTPError as e:  # checked first: HTTPError is a kind of URLError
             err, problem, temporary = e, f"HTTP {e.code}", e.code >= 500 or e.code in (403, 429)
@@ -476,6 +476,9 @@ def main():
                 print(f"::warning::{company} could not be read ({e}); showing its prices from {prev['checkedAt']}")
             else:
                 failures.append(f"{company}: {e}")
+                print(f"::error::{company} could not be read ({e}); " + (
+                    f"its kept prices are from {prev.get('checkedAt', 'an unknown time')}, older than {STALE_HOURS} h"
+                    if prev else "no earlier prices"))
 
     if not companies:
         print("No prices at all; nothing written.", file=sys.stderr)
