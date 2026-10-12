@@ -42,3 +42,8 @@ this date). Rules and project state stay in `AGENT.md`.
 - **2026-10-12**: Verified the failure-email changes on GitHub (run 38250499264, ubuntu-24.04): green, job 69 s (was ~350 s), "Refresh 5-year
   history" 27 s (was 306 s), Wissol fallback warning still shown, all five companies' history complete up to today. Failed runs so far: 7 of 76,
   none since the fixes. To watch over the next 24 h: `gh run list --workflow update-prices.yml` should show no new failure.
+- **2026-10-12**: Vercel emailed "Production deployment failed" for the bot commit 190a22b (12:41 UTC): GitHub answered Vercel's repo fetch with
+  403 "secondary rate limit". Cause: a burst of 3 pushes in 3 minutes (my verification run #76, its price commit, two of my doc/code pushes)
+  after 4 other deploys that hour. No impact: the next deployment (a075f6a, 12:42) was READY and contains the same data. Normal operation is
+  ~4 commits/day spread out, so no change made; if it recurs, use Redeploy in the Vercel dashboard. Option not taken: skip the commit when only
+  `checkedAt` changed (would make the "updated HH:MM" on the site look stale).
